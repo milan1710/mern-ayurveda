@@ -1,0 +1,3 @@
+.qty{display:inline-flex;align-items:center;border:1px solid var(--nv-border);border-radius:10px;overflow:hidden}
+.qty button{background:transparent;color:var(--nv-text);border:none;width:34px;height:34px;cursor:pointer}
+.qty input{width:48px;text-align:center;border:none;background:#fff;color:#000;height:34px}

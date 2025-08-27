@@ -1,0 +1,12 @@
+.staff-grid{
+  display:grid;
+  gap:24px;
+  grid-template-columns:420px 1fr;
+  align-items:start;              /* ensures top alignment */
+}
+@media (max-width:900px){
+  .staff-grid{
+    grid-template-columns:1fr;
+    gap:20px;                     /* tighter spacing on small screens */
+  }
+}

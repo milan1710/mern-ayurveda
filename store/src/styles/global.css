@@ -1,0 +1,23 @@
+@import './theme.css';
+
+*{box-sizing:border-box}
+html,body,#root{height:100%}
+body{
+  margin:0; font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  color:var(--nv-text);
+  background:
+    radial-gradient(1200px 800px at 10% -10%, rgba(34,197,94,.15), transparent 60%),
+    radial-gradient(900px 600px at 110% 10%, rgba(96,165,250,.12), transparent 60%),
+    var(--nv-bg);
+}
+.container{max-width:1200px;margin:24px auto;padding:0 16px}
+.grid{display:grid;gap:16px}
+.btn{border:none;border-radius:12px;padding:10px 14px;cursor:pointer;
+  background:linear-gradient(90deg,var(--nv-primary-600),var(--nv-primary));color:#0b111b;font-weight:700}
+.btn.ghost{background:transparent;color:var(--nv-text);border:1px solid var(--nv-border)}
+.input,.select,textarea{
+  width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--nv-border);
+  background:#fff;color:#000;outline:none;transition:.2s
+}
+.input:focus,.select:focus,textarea:focus{border-color:var(--nv-ring);box-shadow:0 0 0 3px rgba(52,211,153,.18)}
+a{color:inherit;text-decoration:none}

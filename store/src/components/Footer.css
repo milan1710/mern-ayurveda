@@ -1,0 +1,4 @@
+.nv-footer{margin-top:32px;padding:24px 0;border-top:1px solid var(--nv-border);background:rgba(0,0,0,.15)}
+.dim{color:var(--nv-dim)}
+.f-grid{display:flex;justify-content:space-between;gap:12px;align-items:center}
+@media (max-width:640px){.f-grid{flex-direction:column;align-items:flex-start}}

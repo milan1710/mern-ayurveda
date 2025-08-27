@@ -1,0 +1,38 @@
+.login-wrap{
+  min-height: calc(100vh - 70px);
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background: var(--grad-1, linear-gradient(180deg,#0d1a14 0%,#0b1419 100%)); /* uses theme if present */
+}
+
+.login-card{
+  width:100%;
+  max-width:420px;
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding:18px;
+}
+
+.login-title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.login-title img{
+  width:36px;
+  height:36px;
+  border-radius:8px;
+  object-fit:cover;
+}
+
+.login-title h2{
+  margin:0;
+  font-weight:800;
+  font-size:clamp(20px,2vw,24px);
+  color: var(--text);
+}

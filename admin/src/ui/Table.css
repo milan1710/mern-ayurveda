@@ -1,0 +1,59 @@
+.table-wrap{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  box-shadow: var(--shadow);
+  overflow:hidden;                 /* corners respect radius */
+}
+
+/* base table */
+.table{
+  width:100%;
+  border-collapse: collapse;
+  font-size:14px;
+  line-height:1.5;
+}
+.table th,
+.table td{
+  padding:12px 14px;
+  border-bottom:1px solid var(--border);
+  text-align:left;
+  vertical-align:middle;
+}
+.table thead th{
+  background:#f8fafc;
+  color:#111827;
+  font-weight:800;
+  position:sticky;
+  top:0;
+  z-index:1;                       /* headers stay on scroll */
+}
+.table tbody tr:hover{
+  background:#f1f5f9;              /* stronger hover */
+}
+
+/* zebra rows for clarity */
+.table tbody tr:nth-child(even){
+  background:#fcfcfd;
+}
+
+/* FIX: Dark tables (Orders) me white zebra/hover hatao */
+.table-wrap.glass .table tbody tr { 
+  background: transparent !important; 
+}
+.table-wrap.glass .table tbody tr:nth-child(even){
+  background: transparent !important;   /* no white alternate row */
+}
+.table-wrap.glass .table tbody tr:hover{
+  background: #0c172b !important;       /* subtle dark hover */
+}
+.table-wrap.glass .table th,
+.table-wrap.glass .table td{
+  color: #e2e8f0 !important;            /* text hamesha readable */
+  border-bottom-color: rgba(255,255,255,.06) !important;
+}
+
+/* remove black force for dark tables */
+.table-wrap.glass .badge[datastatus] {
+  color: inherit !important;   /* badge ka apna theme color chale */
+}

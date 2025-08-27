@@ -1,0 +1,8 @@
+:root{
+  --nv-bg:#0b1b13; --nv-card:#11281d; --nv-soft:#0f2419;
+  --nv-text:#e7f7ee; --nv-dim:#b6d0c4;
+  --nv-primary:#22c55e; --nv-primary-600:#16a34a;
+  --nv-accent:#60a5fa; --nv-amber:#f59e0b;
+  --nv-border:#1c3327; --nv-ring:#34d399;
+  --radius:12px; --radius-lg:18px; --shadow:0 10px 30px rgba(0,0,0,.25);
+}

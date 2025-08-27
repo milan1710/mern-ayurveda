@@ -1,0 +1,18 @@
+.card{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding:16px;               /* thoda zyada breathing space */
+  transition: box-shadow .2s ease, transform .15s ease;
+}
+.card:hover{
+  box-shadow: 0 8px 24px rgba(2,6,23,.1); /* subtle hover lift */
+  transform: translateY(-2px);
+}
+.card-title{
+  font-weight:800;
+  margin-bottom:12px;
+  font-size:1rem;             /* clear base size */
+  color: var(--text);
+}

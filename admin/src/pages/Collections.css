@@ -1,0 +1,12 @@
+.col-grid{
+  display:grid;
+  gap:24px;
+  grid-template-columns:420px 1fr;
+  align-items:start;            /* ensure equal vertical start */
+}
+@media (max-width:900px){
+  .col-grid{
+    grid-template-columns:1fr;
+    gap:20px;                   /* slightly tighter gap on small screens */
+  }
+}

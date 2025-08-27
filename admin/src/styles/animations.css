@@ -1,0 +1,41 @@
+@keyframes nv-fade-up{
+  0%{opacity:0;transform:translate3d(0,12px,0)}  /* GPU-friendly */
+  100%{opacity:1;transform:translate3d(0,0,0)}
+}
+@keyframes nv-float{
+  0%{transform:translate3d(0,0,0)}
+  50%{transform:translate3d(0,-6px,0)}
+  100%{transform:translate3d(0,0,0)}
+}
+@keyframes nv-shimmer{
+  0%{background-position:-200% 0}
+  100%{background-position:200% 0}
+}
+@keyframes nv-blob{
+  0%,100%{border-radius:53% 47% 58% 42% / 52% 44% 56% 48%}
+  33%{border-radius:60% 40% 50% 50% / 42% 58% 46% 54%}
+  66%{border-radius:48% 52% 44% 56% / 60% 40% 58% 42%}
+}
+
+/* utility */
+.nv-animate-up{
+  animation:nv-fade-up .5s cubic-bezier(.2,.6,.2,1) both; /* smoother exit */
+  will-change: transform, opacity;                         /* perf hint */
+  backface-visibility:hidden;
+  transform:translate3d(0,0,0);
+}
+.nv-float{
+  animation:nv-float 6s ease-in-out infinite;
+  will-change: transform;
+  backface-visibility:hidden;
+  transform:translate3d(0,0,0);
+}
+.nv-blob{
+  animation:nv-blob 14s ease-in-out infinite;
+  will-change: border-radius;
+}
+
+/* Respect user settings */
+@media (prefers-reduced-motion: reduce){
+  .nv-animate-up,.nv-float,.nv-blob{animation:none !important}
+}

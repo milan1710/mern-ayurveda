@@ -1,0 +1,19 @@
+.sn-nav{
+  position:sticky; top:0; z-index:50; display:flex; align-items:center; gap:12px;
+  padding:10px 16px; background:linear-gradient(90deg, rgba(15,36,25,.9), rgba(11,27,19,.9));
+  border-bottom:1px solid var(--nv-border); box-shadow: var(--shadow);
+}
+.sn-left{display:flex;align-items:center;gap:10px;cursor:pointer}
+.sn-logo{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#143423}
+.sn-brand strong{display:block;font-size:16px}
+.sn-brand span{display:block;font-size:12px;color:var(--nv-dim)}
+.sn-links{display:flex;gap:14px}
+.sn-link{padding:8px 12px;border-radius:999px;color:var(--nv-text)}
+.sn-link.active,.sn-link:hover{background:rgba(34,197,94,.18);box-shadow:inset 0 0 0 1px var(--nv-primary)}
+.sn-burger{display:none;margin-left:auto;width:32px;height:32px;gap:5px;border:none;background:none;flex-direction:column;justify-content:center;cursor:pointer}
+.sn-burger span{height:3px;width:22px;background:#fff;border-radius:2px;transition:.3s}
+.sn-burger.active span:nth-child(1){transform:rotate(45deg) translateY(8px)}
+.sn-burger.active span:nth-child(2){opacity:0}
+.sn-burger.active span:nth-child(3){transform:rotate(-45deg) translateY(-8px)}
+.sn-mobile{position:absolute;top:100%;left:0;right:0;background:var(--nv-soft);display:flex;flex-direction:column;gap:8px;padding:12px 16px;border-bottom:1px solid var(--nv-border)}
+@media (max-width:768px){ .sn-burger{display:flex} .desktop{display:none} }

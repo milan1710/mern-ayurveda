@@ -1,0 +1,262 @@
+/* ProductCard.css - Shopify-style with Ayurvedic Theme */
+.pc-card2 {
+  background: #0f2922;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.pc-card2:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+/* ---------- IMAGE (Perfect square, full show) ---------- */
+.pc-imgbox {
+  display: block;
+  position: relative;
+  width: 100%;
+  padding-top: 100%; /* 1:1 aspect ratio */
+  overflow: hidden;
+  background: #1a3b32; /* bg fill for empty space */
+}
+
+.pc-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;    /* ✅ show full image */
+  object-position: center;
+  transition: transform 0.5s ease;
+  background: #0f2922;   /* bg behind transparent images */
+}
+
+.pc-imgbox:hover .pc-img {
+  transform: scale(1.03);
+}
+
+.pc-noimg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #22c55e;
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+/* ---------- BADGES ---------- */
+.pc-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #22c55e;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ---------- CONTENT ---------- */
+.pc-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.pc-title {
+  color: #f8fafc;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 12px;
+  text-decoration: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex-grow: 1;
+  transition: color 0.3s ease;
+}
+
+.pc-title:hover {
+  color: #22c55e;
+}
+
+/* ---------- PRICE ---------- */
+.pc-price {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.pc-price .old {
+  color: #94a3b8;
+  text-decoration: line-through;
+  font-size: 14px;
+}
+
+.pc-price .new {
+  color: #22c55e;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+/* ---------- BUY BUTTON ---------- */
+.pc-buy {
+  background: #22c55e;
+  color: white;
+  text-decoration: none;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+}
+
+.pc-buy:hover {
+  background: #16a34a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 768px) {
+  .pc-content {
+    padding: 12px;
+  }
+  
+  .pc-title {
+    font-size: 15px;
+  }
+  
+  .pc-price .new {
+    font-size: 16px;
+  }
+  
+  .pc-buy {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+}
+
+/* ---------- QUICK VIEW BUTTON ---------- */
+.pc-quickview {
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.95);
+  color: #0b1f1a;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.pc-card2:hover .pc-quickview {
+  bottom: 16px;
+  opacity: 1;
+}
+
+.pc-quickview:hover {
+  background: white;
+}
+
+/* ---------- LOADING STATE ---------- */
+.pc-card2.loading .pc-imgbox {
+  background: linear-gradient(90deg, #1a3b32 0%, #244239 50%, #1a3b32 100%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+.pc-card2.loading .pc-title,
+.pc-card2.loading .pc-price .new,
+.pc-card2.loading .pc-price .old {
+  color: transparent;
+  background: linear-gradient(90deg, #1a3b32 0%, #244239 50%, #1a3b32 100%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+.pc-card2.loading .pc-title {
+  height: 20px;
+  margin-bottom: 10px;
+}
+
+.pc-card2.loading .pc-price .new {
+  height: 22px;
+  width: 80px;
+}
+
+.pc-card2.loading .pc-buy {
+  background: #1a3b32;
+  pointer-events: none;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ---------- WISHLIST ICON ---------- */
+.pc-wishlist {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.3s ease;
+  border: none;
+  color: #64748b;
+}
+
+.pc-card2:hover .pc-wishlist {
+  opacity: 1;
+}
+
+.pc-wishlist:hover {
+  color: #dc2626;
+  background: white;
+}
+
+.pc-wishlist.active {
+  color: #dc2626;
+  opacity: 1;
+}

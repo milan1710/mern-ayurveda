@@ -1,0 +1,264 @@
+// server/src/controllers/orders.controller.js
+const mongoose = require('mongoose');
+const Order = require('../models/Order');
+const Product = require('../models/Product');
+
+function isAdmin(user) { return user && user.role === 'admin'; }
+function isStaff(user) { return user && user.role === 'staff'; }
+
+function canAccessOrder(order, user) {
+  if (isAdmin(user)) return true;
+  if (isStaff(user)) {
+    const assigned = order && (order.assignedTo && (order.assignedTo._id || order.assignedTo));
+    return assigned && String(assigned) === String(user._id);
+  }
+  return false;
+}
+
+function buildListMatch(req) {
+  const q = (req.query.q || '').trim();
+  const status = (req.query.status || '').trim();
+  const match = {};
+
+  if (q) {
+    const rx = new RegExp(q, 'i');
+    match.$or = [
+      { 'info.name': rx },
+      { 'info.phone': rx },
+    ];
+  }
+
+  if (status && status !== 'all') {
+    match.status = status;
+  }
+
+  if (isStaff(req.user)) {
+    match.assignedTo = new mongoose.Types.ObjectId(req.user._id);
+  }
+  return match;
+}
+
+exports.list = async function list(req, res, next) {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit || '10', 10)));
+    const skip = (page - 1) * limit;
+
+    const match = buildListMatch(req);
+
+    const [items, total] = await Promise.all([
+      Order.find(match)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('items.product', 'name price')
+        .populate('assignedTo', 'name email')
+        .lean(),
+      Order.countDocuments(match),
+    ]);
+
+    res.json({
+      items,
+      page,
+      pages: Math.max(1, Math.ceil(total / limit)),
+      total,
+    });
+  } catch (err) { next(err); }
+};
+
+exports.getOne = async function getOne(req, res, next) {
+  try {
+    const id = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const order = await Order.findById(id)
+      .populate('items.product', 'name price')
+      .populate('assignedTo', 'name email')
+      .lean();
+
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    if (!canAccessOrder(order, req.user)) return res.status(403).json({ message: 'Forbidden' });
+
+    res.json({ order });
+  } catch (err) { next(err); }
+};
+
+exports.updateInfo = async function updateInfo(req, res, next) {
+  try {
+    const id = req.params.id;
+    const o = await Order.findById(id).populate('assignedTo', '_id').exec();
+    if (!o) return res.status(404).json({ message: 'Order not found' });
+    if (!canAccessOrder(o, req.user)) return res.status(403).json({ message: 'Forbidden' });
+
+    const body = req.body || {};
+    const firstName = (body.firstName || '').trim();
+    const lastName  = (body.lastName || '').trim();
+
+    const newName = (firstName || lastName)
+      ? (firstName + ' ' + lastName).trim()
+      : (o.info && o.info.name) ? o.info.name : '';
+
+    // safe merge
+    o.info = o.info || {};
+    o.info.name = newName;
+    o.info.phone = (body.phone !== undefined) ? body.phone : (o.info.phone || '');
+    o.info.address = (body.address !== undefined) ? body.address : (o.info.address || '');
+    o.info.city = (body.city !== undefined) ? body.city : (o.info.city || '');
+    o.info.state = (body.state !== undefined) ? body.state : (o.info.state || '');
+    o.info.pin = (body.pin !== undefined) ? body.pin : (o.info.pin || '');
+    o.info.paymentMethod = (body.paymentMethod !== undefined) ? body.paymentMethod : (o.info.paymentMethod || 'COD');
+
+    await o.save();
+
+    const fresh = await Order.findById(id)
+      .populate('items.product', 'name price')
+      .populate('assignedTo', 'name email')
+      .lean();
+
+    res.json({ order: fresh });
+  } catch (err) { next(err); }
+};
+
+exports.updateStatus = async function updateStatus(req, res, next) {
+  try {
+    const id = req.params.id;
+    const o = await Order.findById(id).populate('assignedTo', '_id').exec();
+    if (!o) return res.status(404).json({ message: 'Order not found' });
+    if (!canAccessOrder(o, req.user)) return res.status(403).json({ message: 'Forbidden' });
+
+    const status = (req.body && req.body.status) ? String(req.body.status) : '';
+    const allowed = ['new', 'placed', 'confirmed', 'call_not_pickup', 'call_later', 'cancelled', 'delivered'];
+    if (allowed.indexOf(status) === -1) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    o.status = status;
+    await o.save();
+
+    const fresh = await Order.findById(id)
+      .populate('items.product', 'name price')
+      .populate('assignedTo', 'name email')
+      .lean();
+
+    res.json({ order: fresh });
+  } catch (err) { next(err); }
+};
+
+exports.assign = async function assign(req, res, next) {
+  try {
+    // route पर allowRoles('admin') पहले से लगा है, फिर भी सुरक्षित रहने को:
+    if (!isAdmin(req.user)) return res.status(403).json({ message: 'Forbidden' });
+
+    const id = req.params.id;
+    const staffId = req.body ? req.body.staffId : null;
+
+    const o = await Order.findById(id).exec();
+    if (!o) return res.status(404).json({ message: 'Order not found' });
+
+    if (!staffId) {
+      o.assignedTo = null;
+    } else {
+      if (!mongoose.Types.ObjectId.isValid(staffId)) {
+        return res.status(400).json({ message: 'Invalid staffId' });
+      }
+      o.assignedTo = new mongoose.Types.ObjectId(staffId);
+    }
+    await o.save();
+
+    const fresh = await Order.findById(id)
+      .populate('items.product', 'name price')
+      .populate('assignedTo', 'name email')
+      .lean();
+
+    res.json({ order: fresh });
+  } catch (err) { next(err); }
+};
+
+exports.updateItems = async function updateItems(req, res, next) {
+  try {
+    const id = req.params.id;
+    const body = req.body || {};
+    const o = await Order.findById(id).populate('assignedTo', '_id').exec();
+    if (!o) return res.status(404).json({ message: 'Order not found' });
+    if (!canAccessOrder(o, req.user)) return res.status(403).json({ message: 'Forbidden' });
+
+    // items (optional)
+    if (Array.isArray(body.items)) {
+      const normalized = [];
+      for (let i = 0; i < body.items.length; i++) {
+        const it = body.items[i] || {};
+        if (!it.product || !mongoose.Types.ObjectId.isValid(it.product)) continue;
+
+        const prod = await Product.findById(it.product).select('_id price name').lean();
+        if (!prod) continue;
+
+        const qty = Math.max(1, parseInt(it.qty || 1, 10));
+        const price = (typeof it.price === 'number') ? it.price : (prod.price || 0);
+
+        normalized.push({ product: prod._id, qty, price });
+      }
+      o.items = normalized;
+    }
+
+    // manual amount override (optional)
+    if (body.overrideAmount !== undefined && body.overrideAmount !== null && body.overrideAmount !== '') {
+      const n = Number(body.overrideAmount);
+      if (isFinite(n) && n >= 0) {
+        o.overrideAmount = n;
+      }
+    }
+
+    await o.save();
+
+    const fresh = await Order.findById(id)
+      .populate('items.product', 'name price')
+      .populate('assignedTo', 'name email')
+      .lean();
+
+    res.json({ order: fresh });
+  } catch (err) { next(err); }
+};
+
+exports.addComment = async function addComment(req, res, next) {
+  try {
+    const id = req.params.id;
+    const body = req.body || {};
+    const text = (body.text || '').trim();
+
+    const o = await Order.findById(id).populate('assignedTo', '_id').exec();
+    if (!o) return res.status(404).json({ message: 'Order not found' });
+    if (!canAccessOrder(o, req.user)) return res.status(403).json({ message: 'Forbidden' });
+    if (!text) return res.status(400).json({ message: 'Comment text required' });
+
+    const note = {
+      _id: new mongoose.Types.ObjectId(),
+      text: text,
+      by: { _id: req.user._id, name: req.user.name || req.user.email },
+      at: new Date(),
+    };
+
+    if (!Array.isArray(o.comments)) o.comments = [];
+    o.comments.unshift(note);
+
+    await o.save();
+
+    const fresh = await Order.findById(id)
+      .populate('items.product', 'name price')
+      .populate('assignedTo', 'name email')
+      .lean();
+
+    res.json({ order: fresh });
+  } catch (err) { next(err); }
+};
+
+exports.remove = async function remove(req, res, next) {
+  try {
+    if (!isAdmin(req.user)) return res.status(403).json({ message: 'Forbidden' });
+    const id = req.params.id;
+    const ok = await Order.findByIdAndDelete(id).lean();
+    if (!ok) return res.status(404).json({ message: 'Order not found' });
+    res.json({ success: true });
+  } catch (err) { next(err); }
+};

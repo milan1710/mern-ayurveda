@@ -1,0 +1,43 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22c55e"></stop>
+      <stop offset="100%" stop-color="#60a5fa"></stop>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"></stop>
+      <stop offset="100%" stop-color="#22c55e"></stop>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"></feGaussianBlur>
+      <feMerge>
+        <feMergeNode in="coloredBlur"></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- circle background -->
+  <circle cx="128" cy="128" r="96" fill="url(#g1)" opacity="0.12"></circle>
+
+  <!-- stem -->
+  <path d="M128 190 C128 150, 132 130, 156 108" stroke="url(#g2)" stroke-width="8" stroke-linecap="round" filter="url(#glow)"></path>
+
+  <!-- leaf left -->
+  <path d="M96 120 C70 120, 60 92, 96 84 C110 82, 122 94, 118 108 C114 120, 106 120, 96 120Z" fill="url(#g1)">
+    <animate attributeName="d" dur="4s" repeatCount="indefinite" values="
+      M96 120 C70 120, 60 92, 96 84 C110 82, 122 94, 118 108 C114 120, 106 120, 96 120Z;
+      M96 118 C72 116, 60 90, 96 82 C114 80, 126 94, 120 108 C114 118, 104 120, 96 118Z;
+      M96 120 C70 120, 60 92, 96 84 C110 82, 122 94, 118 108 C114 120, 106 120, 96 120Z
+      "></animate>
+  </path>
+
+  <!-- leaf right -->
+  <path d="M160 96 C184 96, 196 120, 160 128 C148 130, 136 118, 140 104 C144 92, 152 96, 160 96Z" fill="url(#g2)">
+    <animate attributeName="d" dur="4s" begin="-.8s" repeatCount="indefinite" values="
+      M160 96 C184 96, 196 120, 160 128 C148 130, 136 118, 140 104 C144 92, 152 96, 160 96Z;
+      M160 94 C186 92, 198 118, 160 126 C146 128, 136 118, 138 104 C142 90, 152 94, 160 94Z;
+      M160 96 C184 96, 196 120, 160 128 C148 130, 136 118, 140 104 C144 92, 152 96, 160 96Z
+      "></animate>
+  </path>
+</svg>
