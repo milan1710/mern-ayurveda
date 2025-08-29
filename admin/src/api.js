@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',        // Vite proxy karega -> http://localhost:4000
-  withCredentials: true   // httpOnly cookie bhejne/lenne ke liye
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  withCredentials: true
 });
 
 export default api;

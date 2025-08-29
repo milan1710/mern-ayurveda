@@ -8,6 +8,45 @@ const emptyForm = {
   description:'', category:'none', collection:'none', featured:false
 };
 
+// Base URLs
+const API_PUBLIC_URL = import.meta.env.VITE_API_PUBLIC_URL || '';
+const toAbs = (u) => {
+  if (!u) return u;
+  if (u.startsWith('/uploads/')) {
+    const base = API_PUBLIC_URL.replace(/\/+$/, '');
+    return `${base}${u}`;
+  }
+  return u;
+};
+
+// --- URL validation helpers ---
+const isBlobOrData = (u='') => /^blob:|^data:/i.test(u);
+const isHttpHttps = (u='') => /^https?:\/\//i.test(u);
+const isUploadsRel = (u='') => u.startsWith('/uploads/');
+const isPublicImageUrl = (u='') => isHttpHttps(u) || isUploadsRel(u);
+
+// Remove dupes & illegal (blob/data) urls
+const sanitizeUrls = (arr=[]) => {
+  const out = [];
+  const seen = new Set();
+  for (const u of arr) {
+    if (!u || isBlobOrData(u)) continue;          // drop blob/data
+    const abs = toAbs(u);
+    if (!isPublicImageUrl(u) && !isPublicImageUrl(abs)) continue;
+    const key = abs.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(abs);
+  }
+  return out;
+};
+
+const warnIfInvalidUrl = (u) => {
+  if (isBlobOrData(u)) return 'Local preview URL (blob:/data:) save nahi hota.';
+  if (!isPublicImageUrl(u) && !isPublicImageUrl(toAbs(u))) return 'URL galat hai. http(s) ya /uploads/ se start hona chahiye.';
+  return '';
+};
+
 export default function Products({ user }){
   const isAdmin = user?.role === 'admin';
 
@@ -22,9 +61,10 @@ export default function Products({ user }){
   const [editing, setEditing] = useState(null);
 
   // images state
-  const [imgUrls, setImgUrls] = useState([]);       // existing or manual urls (array)
-  const [newFiles, setNewFiles] = useState([]);     // FileList -> Array<File>
+  const [imgUrls, setImgUrls] = useState([]);       // server/public/manual urls (NOT blob)
+  const [newFiles, setNewFiles] = useState([]);     // File[] (previews banenge blob se, but yahan store nahi)
   const [manualUrl, setManualUrl] = useState('');   // single field to add to imgUrls
+  const [manualError, setManualError] = useState('');
 
   const [cats, setCats] = useState([]);
   const [cols, setCols] = useState([]);
@@ -46,6 +86,7 @@ export default function Products({ user }){
     setForm(emptyForm); 
     setImgUrls([]); 
     setManualUrl(''); 
+    setManualError('');
     setNewFiles([]); 
     setModalOpen(true); 
   };
@@ -61,8 +102,10 @@ export default function Products({ user }){
       collection: p.collection?._id || 'none',
       featured: Boolean(p.featured)
     });
-    setImgUrls(Array.isArray(p.images)? p.images : []);
+    // Purane products me agar blob/data galti se save hua, to yahin clean:
+    setImgUrls(sanitizeUrls(Array.isArray(p.images)? p.images : []));
     setManualUrl('');
+    setManualError('');
     setNewFiles([]);
     setModalOpen(true);
   };
@@ -77,9 +120,12 @@ export default function Products({ user }){
 
   const submit = async (e) => {
     e.preventDefault();
-    // upload new files
+    // 1) upload new files -> absolute URLs from server
     const uploaded = await uploadImages(newFiles);
-    const images = [...imgUrls, ...uploaded];
+    // 2) sanitize manual/existing urls (remove blob/data & dupes)
+    const cleaned = sanitizeUrls(imgUrls);
+    // 3) final images
+    const images = sanitizeUrls([...cleaned, ...uploaded]);
 
     const payload = {
       name: form.name, sku: form.sku,
@@ -101,6 +147,7 @@ export default function Products({ user }){
     setImgUrls([]); 
     setNewFiles([]); 
     setManualUrl('');
+    setManualError('');
     fetchData();
   };
 
@@ -114,7 +161,14 @@ export default function Products({ user }){
   const addManualUrl = () => {
     const u = manualUrl.trim();
     if(!u) return;
-    if (!imgUrls.includes(u)) setImgUrls(arr => [...arr, u]);
+    const msg = warnIfInvalidUrl(u);
+    if (msg) { setManualError(msg); return; }
+    setManualError('');
+    const abs = toAbs(u);
+    setImgUrls(arr => {
+      const next = sanitizeUrls([...arr, abs]);
+      return next;
+    });
     setManualUrl('');
   };
   const removeUrl = (u) => setImgUrls(arr => arr.filter(x => x !== u));
@@ -180,7 +234,7 @@ export default function Products({ user }){
                 <td>{p.featured ? 'Yes' : 'No'}</td>
                 <td className="mono img-links">
                   {(p.images||[]).slice(0,2).map((u,idx)=>
-                    <a key={idx} href={u} target="_blank" rel="noreferrer">img{idx+1}</a>
+                    <a key={idx} href={toAbs(u)} target="_blank" rel="noreferrer">img{idx+1}</a>
                   )}
                 </td>
                 <td>
@@ -256,15 +310,25 @@ export default function Products({ user }){
                   <div className="img-list">
                     {imgUrls.map((u, i)=>(
                       <div key={i} className="img-chip">
-                        <img src={u} alt="" />
-                        <span className="u">{u}</span>
+                        <img src={toAbs(u)} alt="" />
+                        <span className="u">
+                          {isBlobOrData(u) ? '(local preview)' : toAbs(u)}
+                        </span>
                         <button type="button" className="chip-x" onClick={()=>removeUrl(u)}>×</button>
                       </div>
                     ))}
                     {imgUrls.length===0 && <div className="muted">No URLs added</div>}
                   </div>
-                  <div className="row">
-                    <input className="input" placeholder="https://example.com/image.jpg" value={manualUrl} onChange={e=>setManualUrl(e.target.value)} />
+                  <div className="row" style={{alignItems:'flex-start', gap:8}}>
+                    <div style={{flex:1}}>
+                      <input
+                        className="input"
+                        placeholder="https://example.com/image.jpg or /uploads/xyz.jpg"
+                        value={manualUrl}
+                        onChange={e=>{ setManualUrl(e.target.value); setManualError(''); }}
+                      />
+                      {manualError && <div className="muted" style={{color:'#c00', marginTop:6}}>{manualError}</div>}
+                    </div>
                     <button type="button" className="btn" onClick={addManualUrl}>Add</button>
                   </div>
                 </div>
@@ -277,6 +341,7 @@ export default function Products({ user }){
                     <div className="preview-wrap">
                       {newFiles.map((f,i)=>(
                         <div key={i} className="preview-card">
+                          {/* yeh sirf preview hai; yeh URL kabhi DB me nahi jayegi */}
                           <img alt="" src={URL.createObjectURL(f)} className="preview-thumb" />
                           <button type="button" className="mini-x" onClick={()=>removeNewFile(i)}>Remove</button>
                         </div>
