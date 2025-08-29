@@ -1,14 +1,58 @@
-.form{ display:grid; gap:12px; padding:14px; }
-
-.input, .select, textarea.input{
-  width:100%; padding:11px 12px; border-radius:12px;
-  border:1px solid var(--border); background:#fff; color:#0b1720;
-  outline: none; transition: box-shadow .15s ease, border .15s ease, background .2s ease;
+.form{
+  display:grid;
+  gap:12px;
+  padding:14px;
 }
+
+/* inputs */
+.input, .select, textarea.input{
+  width:100%;
+  padding:11px 12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:#fff;
+  color:#0b1720;
+  outline:none;
+  transition: box-shadow .15s ease, border .15s ease, background .2s ease, color .2s ease;
+  font-size:14px;
+  line-height:1.4;
+  min-height:40px;          /* better tap target */
+  caret-color: var(--ring); /* visible caret */
+}
+
+/* focus */
 .input:focus, .select:focus, textarea.input:focus{
   border-color: var(--ring);
   box-shadow: 0 0 0 3px rgba(34,197,94,.18);
 }
-.input::placeholder, textarea.input::placeholder{ color:#8b98a7; }
 
-.inline{ display:flex; gap:10px; flex-wrap:wrap; }
+/* placeholder */
+.input::placeholder, textarea.input::placeholder{
+  color:#8896a8;            /* slightly higher contrast */
+}
+
+/* selects behave consistently */
+.select{
+  appearance:none;          /* stable cross-browser */
+  -webkit-appearance:none;
+  -moz-appearance:none;
+}
+
+/* disabled / read-only states */
+.input:disabled, .select:disabled, textarea.input:disabled{
+  background:#f1f5f9;
+  color:#64748b;
+  cursor:not-allowed;
+}
+.input[readonly], .select[readonly], textarea.input[readonly]{
+  background:#f8fafc;
+  color:#475569;
+}
+
+/* inline group */
+.inline{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;       /* aligned controls */
+}
