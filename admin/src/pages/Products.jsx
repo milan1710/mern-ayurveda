@@ -1,4 +1,3 @@
-// admin/src/pages/Products.jsx
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import './Products.css';
@@ -8,7 +7,6 @@ const emptyForm = {
   description:'', category:'none', collection:'none', featured:false
 };
 
-// Base URLs
 const API_PUBLIC_URL = import.meta.env.VITE_API_PUBLIC_URL || '';
 const toAbs = (u) => {
   if (!u) return u;
@@ -19,18 +17,16 @@ const toAbs = (u) => {
   return u;
 };
 
-// --- URL validation helpers ---
 const isBlobOrData = (u='') => /^blob:|^data:/i.test(u);
 const isHttpHttps = (u='') => /^https?:\/\//i.test(u);
 const isUploadsRel = (u='') => u.startsWith('/uploads/');
 const isPublicImageUrl = (u='') => isHttpHttps(u) || isUploadsRel(u);
 
-// Remove dupes & illegal (blob/data) urls
 const sanitizeUrls = (arr=[]) => {
   const out = [];
   const seen = new Set();
   for (const u of arr) {
-    if (!u || isBlobOrData(u)) continue;          // drop blob/data
+    if (!u || isBlobOrData(u)) continue;
     const abs = toAbs(u);
     if (!isPublicImageUrl(u) && !isPublicImageUrl(abs)) continue;
     const key = abs.toLowerCase();
@@ -49,6 +45,7 @@ const warnIfInvalidUrl = (u) => {
 
 export default function Products({ user }){
   const isAdmin = user?.role === 'admin';
+  const isSubAdmin = user?.role === 'sub_admin';
 
   const [items, setItems] = useState([]);
   const [q, setQ] = useState('');
@@ -60,35 +57,50 @@ export default function Products({ user }){
   const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState(null);
 
-  // images state
-  const [imgUrls, setImgUrls] = useState([]);       // server/public/manual urls (NOT blob)
-  const [newFiles, setNewFiles] = useState([]);     // File[] (previews banenge blob se, but yahan store nahi)
-  const [manualUrl, setManualUrl] = useState('');   // single field to add to imgUrls
+  const [imgUrls, setImgUrls] = useState([]);
+  const [newFiles, setNewFiles] = useState([]);
+  const [manualUrl, setManualUrl] = useState('');
   const [manualError, setManualError] = useState('');
 
   const [cats, setCats] = useState([]);
   const [cols, setCols] = useState([]);
 
+  // assign dropdown
+  const [assignables, setAssignables] = useState([]);
+  const [assignedTo, setAssignedTo] = useState('');
+
   const fetchData = async () => {
-    const { data } = await api.get(`/products?q=${encodeURIComponent(q)}&page=${page}&limit=${limit}`);
+    const { data } = await api.get(`/products?q=${encodeURIComponent(q)}&page=${page}&limit=${limit}`, {
+      headers: { 'Cache-Control': 'no-cache' }
+    });
     setItems(data.items || []);
     setPages(data.pages || 1);
   };
+
   const loadMeta = async () => {
     const [c, k] = await Promise.all([ api.get('/categories'), api.get('/collections') ]);
     setCats(c.data.items||[]); setCols(k.data.items||[]);
   };
-  useEffect(()=>{ fetchData(); /* eslint-disable-next-line */ }, [q, page]);
-  useEffect(()=>{ loadMeta(); },[]);
 
-  const openAdd = () => { 
-    setEditing(null); 
-    setForm(emptyForm); 
-    setImgUrls([]); 
-    setManualUrl(''); 
+  const loadAssignables = async () => {
+    if (isAdmin || isSubAdmin) {
+      const r = await api.get('/users/assignables', { headers: { 'Cache-Control': 'no-cache' } });
+      setAssignables(r.data.items || []);
+    }
+  };
+
+  useEffect(()=>{ fetchData(); }, [q, page]);
+  useEffect(()=>{ loadMeta(); loadAssignables(); },[]);
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm(emptyForm);
+    setImgUrls([]);
+    setManualUrl('');
     setManualError('');
-    setNewFiles([]); 
-    setModalOpen(true); 
+    setNewFiles([]);
+    setAssignedTo('');
+    setModalOpen(true);
   };
 
   const openEdit = (p) => {
@@ -102,11 +114,11 @@ export default function Products({ user }){
       collection: p.collection?._id || 'none',
       featured: Boolean(p.featured)
     });
-    // Purane products me agar blob/data galti se save hua, to yahin clean:
     setImgUrls(sanitizeUrls(Array.isArray(p.images)? p.images : []));
     setManualUrl('');
     setManualError('');
     setNewFiles([]);
+    setAssignedTo(p.assignedTo?._id || '');
     setModalOpen(true);
   };
 
@@ -120,11 +132,8 @@ export default function Products({ user }){
 
   const submit = async (e) => {
     e.preventDefault();
-    // 1) upload new files -> absolute URLs from server
     const uploaded = await uploadImages(newFiles);
-    // 2) sanitize manual/existing urls (remove blob/data & dupes)
     const cleaned = sanitizeUrls(imgUrls);
-    // 3) final images
     const images = sanitizeUrls([...cleaned, ...uploaded]);
 
     const payload = {
@@ -136,18 +145,20 @@ export default function Products({ user }){
       images,
       category: form.category || 'none',
       collection: form.collection || 'none',
-      featured: Boolean(form.featured)
+      featured: Boolean(form.featured),
+      assignedTo: assignedTo || null
     };
 
     if(editing) await api.put(`/products/${editing}`, payload);
     else        await api.post('/products', payload);
 
-    setModalOpen(false); 
-    setForm(emptyForm); 
-    setImgUrls([]); 
-    setNewFiles([]); 
+    setModalOpen(false);
+    setForm(emptyForm);
+    setImgUrls([]);
+    setNewFiles([]);
     setManualUrl('');
     setManualError('');
+    setAssignedTo('');
     fetchData();
   };
 
@@ -157,7 +168,6 @@ export default function Products({ user }){
     fetchData();
   };
 
-  // image helpers
   const addManualUrl = () => {
     const u = manualUrl.trim();
     if(!u) return;
@@ -165,10 +175,7 @@ export default function Products({ user }){
     if (msg) { setManualError(msg); return; }
     setManualError('');
     const abs = toAbs(u);
-    setImgUrls(arr => {
-      const next = sanitizeUrls([...arr, abs]);
-      return next;
-    });
+    setImgUrls(arr => sanitizeUrls([...arr, abs]));
     setManualUrl('');
   };
   const removeUrl = (u) => setImgUrls(arr => arr.filter(x => x !== u));
@@ -187,6 +194,14 @@ export default function Products({ user }){
   const discount = (p) => (p.oldPrice && p.oldPrice>p.price)
     ? Math.round(((p.oldPrice - p.price)/p.oldPrice)*100) : 0;
 
+  const renderAssigned = (a) => {
+    if (!a) return '— Unassigned —';
+    if (typeof a === 'string') return `ID: ${a}`;
+    if (a.name) return `${a.name} (${a.role})`;
+    if (a._id) return `ID: ${a._id}`;
+    return '— Unassigned —';
+  };
+
   return (
     <div className="container">
       <div className="products-head">
@@ -196,7 +211,9 @@ export default function Products({ user }){
           value={q}
           onChange={e=>{ setPage(1); setQ(e.target.value); }}
         />
-        {isAdmin && <button className="btn solid" onClick={openAdd}>+ Add Product</button>}
+        {(isAdmin || isSubAdmin) && (
+          <button className="btn solid" onClick={openAdd}>+ Add Product</button>
+        )}
       </div>
 
       <div className="table-wrap glass">
@@ -211,6 +228,7 @@ export default function Products({ user }){
               <th>Category</th>
               <th>Collection</th>
               <th>Featured</th>
+              <th>Assigned To</th>
               <th>Images</th>
               <th>Actions</th>
             </tr>
@@ -232,23 +250,24 @@ export default function Products({ user }){
                 <td>{p.category?.name || '-'}</td>
                 <td>{p.collection?.name || '-'}</td>
                 <td>{p.featured ? 'Yes' : 'No'}</td>
+                <td>{renderAssigned(p.assignedTo)}</td>
                 <td className="mono img-links">
                   {(p.images||[]).slice(0,2).map((u,idx)=>
                     <a key={idx} href={toAbs(u)} target="_blank" rel="noreferrer">img{idx+1}</a>
                   )}
                 </td>
                 <td>
-                  {isAdmin ? (
+                  {(isAdmin || isSubAdmin) ? (
                     <div className="row">
                       <button className="btn" onClick={()=>openEdit(p)}>Edit</button>
                       <button className="btn ghost danger" onClick={()=>del(p._id)}>Delete</button>
                     </div>
-                  ) : (<span className="badge" datastatus="Confirmed">Read only</span>)}
+                  ) : (<span className="badge">Read only</span>)}
                 </td>
               </tr>
             ))}
             {items.length===0 && (
-              <tr><td colSpan={10} style={{textAlign:'center', opacity:.7, padding:'18px'}}>No products</td></tr>
+              <tr><td colSpan={11} style={{textAlign:'center', opacity:.7, padding:'18px'}}>No products</td></tr>
             )}
           </tbody>
         </table>
@@ -262,7 +281,6 @@ export default function Products({ user }){
         </div>
       )}
 
-      {/* Modal */}
       {modalOpen && (
         <div className="modal-backdrop" onClick={()=>setModalOpen(false)}>
           <div className="modal glass nv-animate-up" onClick={(e)=>e.stopPropagation()}>
@@ -302,18 +320,32 @@ export default function Products({ user }){
                   </select>
                 </div>
 
+                {(isAdmin || isSubAdmin) && (
+                  <div className="row">
+                    <select
+                      className="select"
+                      value={assignedTo}
+                      onChange={e => setAssignedTo(e.target.value)}
+                    >
+                      <option value="">Assign To: Self</option>
+                      {assignables.map(u => (
+                        <option key={u._id} value={u._id}>
+                          {u.name} ({u.role})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <textarea className="input" rows={3} placeholder="Description" value={form.description} onChange={e=>setForm(f=>({...f, description:e.target.value}))}/>
 
-                {/* Image URLs list + add */}
                 <div className="block">
                   <label className="lbl">Image URLs</label>
                   <div className="img-list">
                     {imgUrls.map((u, i)=>(
                       <div key={i} className="img-chip">
                         <img src={toAbs(u)} alt="" />
-                        <span className="u">
-                          {isBlobOrData(u) ? '(local preview)' : toAbs(u)}
-                        </span>
+                        <span className="u">{isBlobOrData(u) ? '(local preview)' : toAbs(u)}</span>
                         <button type="button" className="chip-x" onClick={()=>removeUrl(u)}>×</button>
                       </div>
                     ))}
@@ -333,7 +365,6 @@ export default function Products({ user }){
                   </div>
                 </div>
 
-                {/* Upload new files */}
                 <div className="block">
                   <label className="lbl">Upload images (multiple)</label>
                   <input type="file" multiple accept="image/*" onChange={e=>onNewFiles(e.target.files)} />
@@ -341,7 +372,6 @@ export default function Products({ user }){
                     <div className="preview-wrap">
                       {newFiles.map((f,i)=>(
                         <div key={i} className="preview-card">
-                          {/* yeh sirf preview hai; yeh URL kabhi DB me nahi jayegi */}
                           <img alt="" src={URL.createObjectURL(f)} className="preview-thumb" />
                           <button type="button" className="mini-x" onClick={()=>removeNewFile(i)}>Remove</button>
                         </div>
@@ -356,10 +386,9 @@ export default function Products({ user }){
                 </div>
               </form>
             </div>
-
           </div>
         </div>
       )}
     </div>
-  );
+  );  
 }

@@ -8,7 +8,10 @@ router.get('/:id', requireAuth, Orders.getOne);
 
 router.put('/:id/info', requireAuth, Orders.updateInfo);
 router.put('/:id/status', requireAuth, Orders.updateStatus);
-router.put('/:id/assign', requireAuth, allowRoles('admin'), Orders.assign);
+
+// ✅ ab admin + sub_admin dono assign kar sakte hain
+router.put('/:id/assign', requireAuth, allowRoles('admin', 'sub_admin'), Orders.assign);
+
 router.put('/:id/items', requireAuth, Orders.updateItems);
 router.post('/:id/comment', requireAuth, Orders.addComment);
 

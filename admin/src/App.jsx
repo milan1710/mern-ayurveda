@@ -101,15 +101,18 @@ export default function App(){
           </ProtectedRoute>
         } />
 
-        {/* Staff management: only admin */}
-        <Route path="/staff" element={
-          <ProtectedRoute>
-            <RequireRole user={user} allow={['admin']}>
-              <Staff />
-            </RequireRole>
-            {!user?.role || user?.role !== 'admin' ? <div className="container">Forbidden</div> : null}
-          </ProtectedRoute>
-        } />
+       {/* Staff management: admin & sub_admin */}
+<Route path="/staff" element={
+  <ProtectedRoute>
+    <RequireRole user={user} allow={['admin','sub_admin']}>
+      <Staff user={user} />
+    </RequireRole>
+    {!user?.role || (user?.role !== 'admin' && user?.role !== 'sub_admin')
+      ? <div className="container">Forbidden</div>
+      : null}
+  </ProtectedRoute>
+} />
+
 
         {/* Wildcard: staff => /orders, admin => / */}
         <Route path="*" element={<Navigate to={user?.role==='staff' ? '/orders' : '/'} replace />} />
