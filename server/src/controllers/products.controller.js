@@ -11,7 +11,7 @@ exports.list = async (req, res) => {
     if (q) {
       where.$or = [
         { name: { $regex: q, $options: 'i' } },
-        { sku:  { $regex: q, $options: 'i' } },
+        { sku: { $regex: q, $options: 'i' } },
       ];
     }
 
@@ -21,7 +21,7 @@ exports.list = async (req, res) => {
       if (q) {
         where.$or = [
           { name: { $regex: q, $options: 'i' } },
-          { sku:  { $regex: q, $options: 'i' } },
+          { sku: { $regex: q, $options: 'i' } },
         ];
       }
     } else if (req.user.role === 'sub_admin') {
@@ -75,7 +75,8 @@ exports.create = async (req, res) => {
   try {
     const body = req.body || {};
 
-    let assignedTo = req.user._id;
+    // ✅ assignedTo सिर्फ़ तभी set होगा जब दिया गया हो
+    let assignedTo = null;
     if (body.assignedTo && mongoose.Types.ObjectId.isValid(body.assignedTo)) {
       assignedTo = body.assignedTo;
     }
@@ -93,7 +94,7 @@ exports.create = async (req, res) => {
       collection: body.collection && body.collection !== 'none' ? body.collection : null,
       createdBy: req.user._id,
       createdByRole: req.user.role,
-      assignedTo,
+      assignedTo,   // ✅ अब सही तरीके से save होगा
     });
 
     res.json({ product: doc });
@@ -121,8 +122,11 @@ exports.update = async (req, res) => {
     p.category = body.category && body.category !== 'none' ? body.category : null;
     p.collection = body.collection && body.collection !== 'none' ? body.collection : null;
 
+    // ✅ assignedTo update या unassign
     if (body.assignedTo && mongoose.Types.ObjectId.isValid(body.assignedTo)) {
       p.assignedTo = body.assignedTo;
+    } else if (body.assignedTo === null || body.assignedTo === '') {
+      p.assignedTo = null; // unassign
     }
 
     await p.save();

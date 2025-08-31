@@ -1,16 +1,16 @@
 const { Schema, model, Types } = require('mongoose');
 
 const orderItemSchema = new Schema({
-  product: { type:Types.ObjectId, ref:'Product', required:true },
-  qty: { type:Number, required:true, min:1 },
-  priceOverride: { type:Number, default:null } // admin/staff override per item
-}, { _id:false });
+  product: { type: Types.ObjectId, ref: 'Product', required: true },
+  qty: { type: Number, required: true, min: 1 },
+  priceOverride: { type: Number, default: null } // admin/staff override per item
+}, { _id: false });
 
 const commentSchema = new Schema({
-  by: { type:Types.ObjectId, ref:'User', required:true },
-  text: { type:String, required:true },
-  at: { type:Date, default: Date.now }
-}, { _id:false });
+  by: { type: Types.ObjectId, ref: 'User', required: true },
+  text: { type: String, required: true },
+  at: { type: Date, default: Date.now }
+}, { _id: false });
 
 const orderSchema = new Schema({
   info: {
@@ -20,16 +20,19 @@ const orderSchema = new Schema({
     city: String,
     state: String,
     pin: String,
-    paymentMethod: { type:String, default:'COD' }
+    paymentMethod: { type: String, default: 'COD' }
   },
   status: {
-    type:String,
-    enum:['new','placed','confirmed','call_not_pickup','call_later','cancelled','delivered'],
+    type: String,
+    enum: ['new', 'placed', 'confirmed', 'call_not_pickup', 'call_later', 'cancelled', 'delivered'],
     default: 'new'
   },
   items: [orderItemSchema],
-  assignedTo: { type:Types.ObjectId, ref:'User', default:null },
+
+  // ✅ Order auto-assign to subAdmin (from Product)
+  assignedTo: { type: Types.ObjectId, ref: 'User', default: null },
+
   comments: [commentSchema]
-}, { timestamps:true });
+}, { timestamps: true });
 
 module.exports = model('Order', orderSchema);

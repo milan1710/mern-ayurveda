@@ -23,7 +23,7 @@ const emptyView = {
   comments: []
 };
 
-export default function Orders({ user }){
+export default function Orders({ user }) {
   const isAdmin = user?.role === 'admin';
 
   const [items, setItems] = useState([]);
@@ -45,10 +45,10 @@ export default function Orders({ user }){
 
   // form state inside modal (split first/last + status + assigned)
   const [form, setForm] = useState({
-    firstName:'', lastName:'', phone:'',
-    address:'', city:'', state:'', pin:'',
-    paymentMethod:'COD', status:'new',
-    assigned:'' // staff id
+    firstName: '', lastName: '', phone: '',
+    address: '', city: '', state: '', pin: '',
+    paymentMethod: 'COD', status: 'new',
+    assigned: '' // staff id
   });
 
   const fetchData = async () => {
@@ -61,7 +61,7 @@ export default function Orders({ user }){
     setItems(data.items || []);
     setPages(data.pages || 1);
   };
-  useEffect(()=>{ fetchData(); /* eslint-disable-next-line */ }, [q, status, page]);
+  useEffect(() => { fetchData(); /* eslint-disable-next-line */ }, [q, status, page]);
 
   const fetchStaff = async () => {
     if (!isAdmin) return;
@@ -72,13 +72,13 @@ export default function Orders({ user }){
       setStaff([]);
     }
   };
-  useEffect(()=>{ fetchStaff(); /* eslint-disable-next-line */ }, [isAdmin]);
+  useEffect(() => { fetchStaff(); /* eslint-disable-next-line */ }, [isAdmin]);
 
   // Helpers
-  const splitName = (full='')=>{
+  const splitName = (full = '') => {
     const parts = String(full).trim().split(/\s+/);
-    if (parts.length === 0) return { firstName:'', lastName:'' };
-    if (parts.length === 1) return { firstName:parts[0], lastName:'' };
+    if (parts.length === 0) return { firstName: '', lastName: '' };
+    if (parts.length === 1) return { firstName: parts[0], lastName: '' };
     const firstName = parts.shift();
     const lastName = parts.join(' ');
     return { firstName, lastName };
@@ -101,6 +101,7 @@ export default function Orders({ user }){
       pin: o.info?.pin || '',
       paymentMethod: o.info?.paymentMethod || 'COD',
       status: o.status || 'new',
+      // ✅ assigned auto select if already assigned
       assigned: (o.assignedTo?._id || o.assignedTo || '') || '',
     });
 
@@ -117,18 +118,18 @@ export default function Orders({ user }){
     return Number(p || 0);
   };
 
-  const subTotal = useMemo(()=>{
-    return (view.items||[]).reduce((sum, it)=>{
+  const subTotal = useMemo(() => {
+    return (view.items || []).reduce((sum, it) => {
       const price = priceOf(it);
       const qty = Number(it.qty ?? 0);
       return sum + (price * qty);
     }, 0);
-  },[view.items]);
+  }, [view.items]);
 
   const updateItemQty = (idx, qty) => {
-    const qn = Math.max(1, Number(qty)||1);
+    const qn = Math.max(1, Number(qty) || 1);
     setView(v => {
-      const next = [...(v.items||[])];
+      const next = [...(v.items || [])];
       next[idx] = { ...next[idx], qty: qn };
       return { ...v, items: next };
     });
@@ -137,7 +138,7 @@ export default function Orders({ user }){
   const updateItemPrice = (idx, price) => {
     const pn = price === '' ? '' : Number(price);
     setView(v => {
-      const next = [...(v.items||[])];
+      const next = [...(v.items || [])];
       next[idx] = { ...next[idx], price: pn === '' ? null : (isNaN(pn) ? 0 : pn) };
       return { ...v, items: next };
     });
@@ -146,7 +147,7 @@ export default function Orders({ user }){
   const saveInfo = async (e) => {
     e.preventDefault();
     setSaving(true); setErr('');
-    try{
+    try {
       // 1) update info
       await api.put(`/orders/${view._id}/info`, {
         firstName: form.firstName,
@@ -160,7 +161,7 @@ export default function Orders({ user }){
       });
 
       // 2) update status if changed
-      if ((view.status||'') !== (form.status||'')) {
+      if ((view.status || '') !== (form.status || '')) {
         await api.put(`/orders/${view._id}/status`, { status: form.status });
       }
 
@@ -177,7 +178,6 @@ export default function Orders({ user }){
         const payload = view.items.map(it => ({
           product: it.product?._id || it.product,
           qty: Number(it.qty || 1),
-          // if price input left blank, send null to use product.price
           price: (it.price === null || it.price === '' || it.price === undefined)
             ? null
             : Number(it.price)
@@ -193,28 +193,28 @@ export default function Orders({ user }){
       // reload list + modal view
       await fetchData();
       await openView(view._id);
-    }catch(e){
+    } catch (e) {
       setErr(e?.response?.data?.message || 'Could not save');
-    }finally{
+    } finally {
       setSaving(false);
     }
   };
 
   // inline assign (outside modal)
   const inlineAssign = async (orderId, staffId) => {
-    try{
+    try {
       await api.put(`/orders/${orderId}/assign`, { staffId: staffId || null });
       await fetchData();
-    }catch(e){
+    } catch (e) {
       alert(e?.response?.data?.message || 'Could not assign');
     }
   };
 
-  const pager = useMemo(()=>{
+  const pager = useMemo(() => {
     const arr = [];
-    for(let i=1;i<=pages;i++) arr.push(i);
+    for (let i = 1; i <= pages; i++) arr.push(i);
     return arr;
-  },[pages]);
+  }, [pages]);
 
   return (
     <div className="container">
@@ -223,15 +223,15 @@ export default function Orders({ user }){
           className="input"
           placeholder="Search name or phone…"
           value={q}
-          onChange={e=>{ setPage(1); setQ(e.target.value); }}
+          onChange={e => { setPage(1); setQ(e.target.value); }}
         />
         <select
           className="select"
           value={status}
-          onChange={e=>{ setPage(1); setStatus(e.target.value); }}
+          onChange={e => { setPage(1); setStatus(e.target.value); }}
         >
           <option value="all">All Status</option>
-          {STATUSES.map(s=> <option key={s.value} value={s.value}>{s.label}</option>)}
+          {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
       </div>
 
@@ -243,9 +243,9 @@ export default function Orders({ user }){
             </tr>
           </thead>
           <tbody>
-            {items.map((o,i)=>(
+            {items.map((o, i) => (
               <tr key={o._id}>
-                <td>{(page-1)*limit + i + 1}</td>
+                <td>{(page - 1) * limit + i + 1}</td>
                 <td>{o.info?.name || '-'}</td>
                 <td>{o.info?.phone || '-'}</td>
                 <td>
@@ -253,13 +253,13 @@ export default function Orders({ user }){
                     {labelOf(o.status)}
                   </span>
                 </td>
-                <td>{(o.items||[]).reduce((a,it)=>a + (Number(it.qty)||0),0)}</td>
+                <td>{(o.items || []).reduce((a, it) => a + (Number(it.qty) || 0), 0)}</td>
                 <td>
                   {isAdmin ? (
                     <select
                       className="select od-assign-inline"
                       value={(o.assignedTo?._id || o.assignedTo || '') || ''}
-                      onChange={(e)=> inlineAssign(o._id, e.target.value)}
+                      onChange={(e) => inlineAssign(o._id, e.target.value)}
                     >
                       <option value="">— Unassigned —</option>
                       {staff.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
@@ -269,22 +269,22 @@ export default function Orders({ user }){
                 <td>{new Date(o.createdAt).toLocaleString()}</td>
                 <td>
                   <div className="row">
-                    <button className="btn" onClick={()=>openView(o._id)}>View</button>
+                    <button className="btn" onClick={() => openView(o._id)}>View</button>
                   </div>
                 </td>
               </tr>
             ))}
-            {items.length===0 && (
-              <tr><td colSpan={8} style={{textAlign:'center', opacity:.7, padding:'18px'}}>No orders</td></tr>
+            {items.length === 0 && (
+              <tr><td colSpan={8} style={{ textAlign: 'center', opacity: .7, padding: '18px' }}>No orders</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {pages>1 && (
+      {pages > 1 && (
         <div className="pager">
-          {pager.map(n=>(
-            <button key={n} className={`pager-btn ${n===page?'active':''}`} onClick={()=>setPage(n)}>{n}</button>
+          {pager.map(n => (
+            <button key={n} className={`pager-btn ${n === page ? 'active' : ''}`} onClick={() => setPage(n)}>{n}</button>
           ))}
         </div>
       )}
@@ -292,7 +292,7 @@ export default function Orders({ user }){
       {/* VIEW / EDIT MODAL */}
       {modalOpen && (
         <div className="modal-backdrop" onClick={closeModal}>
-          <div className="modal glass nv-animate-up od-modal" onClick={(e)=>e.stopPropagation()}>
+          <div className="modal glass nv-animate-up od-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <h3>Order Details</h3>
               <button className="close-x" onClick={closeModal}>×</button>
@@ -310,7 +310,7 @@ export default function Orders({ user }){
                         <select
                           className="select"
                           value={form.assigned}
-                          onChange={(e)=> setForm(f=>({ ...f, assigned: e.target.value }))}
+                          onChange={(e) => setForm(f => ({ ...f, assigned: e.target.value }))}
                         >
                           <option value="">— Unassigned —</option>
                           {staff.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
@@ -324,11 +324,11 @@ export default function Orders({ user }){
                     <div className="row">
                       <div className="od-field">
                         <label className="od-label">Phone</label>
-                        <input className="input" placeholder="10-digit phone" value={form.phone} onChange={e=>setForm(f=>({...f, phone:e.target.value}))}/>
+                        <input className="input" placeholder="10-digit phone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
                       </div>
                       <div className="od-field">
                         <label className="od-label">Payment</label>
-                        <select className="select" value={form.paymentMethod} onChange={e=>setForm(f=>({...f, paymentMethod:e.target.value}))}>
+                        <select className="select" value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value }))}>
                           <option value="COD">COD</option>
                           <option value="ONLINE" disabled>Online (coming soon)</option>
                         </select>
@@ -341,11 +341,11 @@ export default function Orders({ user }){
                     <div className="row">
                       <div className="od-field">
                         <label className="od-label">First name</label>
-                        <input className="input" value={form.firstName} onChange={e=>setForm(f=>({...f, firstName:e.target.value}))}/>
+                        <input className="input" value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} />
                       </div>
                       <div className="od-field">
                         <label className="od-label">Last name</label>
-                        <input className="input" value={form.lastName} onChange={e=>setForm(f=>({...f, lastName:e.target.value}))}/>
+                        <input className="input" value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
                       </div>
                     </div>
                   </div>
@@ -354,20 +354,20 @@ export default function Orders({ user }){
                     <div className="od-sec-title">Shipping</div>
                     <div className="od-field">
                       <label className="od-label">Address</label>
-                      <input className="input" placeholder="House no, street" value={form.address} onChange={e=>setForm(f=>({...f, address:e.target.value}))}/>
+                      <input className="input" placeholder="House no, street" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
                     </div>
                     <div className="row">
                       <div className="od-field">
                         <label className="od-label">City</label>
-                        <input className="input" value={form.city} onChange={e=>setForm(f=>({...f, city:e.target.value}))}/>
+                        <input className="input" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
                       </div>
                       <div className="od-field">
                         <label className="od-label">State</label>
-                        <input className="input" value={form.state} onChange={e=>setForm(f=>({...f, state:e.target.value}))}/>
+                        <input className="input" value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value }))} />
                       </div>
                       <div className="od-field">
                         <label className="od-label">PIN code</label>
-                        <input className="input" value={form.pin} onChange={e=>setForm(f=>({...f, pin:e.target.value}))}/>
+                        <input className="input" value={form.pin} onChange={e => setForm(f => ({ ...f, pin: e.target.value }))} />
                       </div>
                     </div>
                   </div>
@@ -376,7 +376,7 @@ export default function Orders({ user }){
                     <div className="od-sec-title">Status</div>
                     <div className="od-field">
                       <label className="od-label">Order status</label>
-                      <select className="select" value={form.status} onChange={e=>setForm(f=>({...f, status:e.target.value}))}>
+                      <select className="select" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
                         {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                       </select>
                     </div>
@@ -385,23 +385,23 @@ export default function Orders({ user }){
                   <div className="od-section">
                     <div className="od-sec-title">Items</div>
                     <div className="od-items od-items-edit">
-                      {(view.items||[]).map((it, idx)=>(
+                      {(view.items || []).map((it, idx) => (
                         <div key={idx} className="od-item">
                           <div className="od-item-name">{it.product?.name || 'Product'}</div>
 
                           {/* Qty */}
                           <div className="od-qtyctrl">
-                            <button type="button" onClick={()=>updateItemQty(idx, (Number(it.qty||1)-1))}>−</button>
+                            <button type="button" onClick={() => updateItemQty(idx, (Number(it.qty || 1) - 1))}>−</button>
                             <input
                               type="number"
                               min="1"
                               value={it.qty}
-                              onChange={e=>updateItemQty(idx, e.target.value)}
+                              onChange={e => updateItemQty(idx, e.target.value)}
                             />
-                            <button type="button" onClick={()=>updateItemQty(idx, (Number(it.qty||1)+1))}>+</button>
+                            <button type="button" onClick={() => updateItemQty(idx, (Number(it.qty || 1) + 1))}>+</button>
                           </div>
 
-                          {/* ✅ Editable price */}
+                          {/* Editable price */}
                           <div className="od-price-edit">
                             ₹
                             <input
@@ -409,15 +409,15 @@ export default function Orders({ user }){
                               type="number"
                               step="0.01"
                               min="0"
-                              value={ (it.price === null || it.price === undefined) ? '' : it.price }
+                              value={(it.price === null || it.price === undefined) ? '' : it.price}
                               placeholder={String(it.product?.price ?? 0)}
-                              onChange={e=>updateItemPrice(idx, e.target.value)}
+                              onChange={e => updateItemPrice(idx, e.target.value)}
                               title="Leave blank to use product price"
                             />
                           </div>
                         </div>
                       ))}
-                      {(!view.items || view.items.length===0) && (
+                      {(!view.items || view.items.length === 0) && (
                         <div className="od-empty">No items</div>
                       )}
                     </div>
@@ -436,10 +436,10 @@ export default function Orders({ user }){
                       rows="3"
                       placeholder="Enter note (e.g. customer said call later, address landmark, etc.)"
                       value={note}
-                      onChange={e=>setNote(e.target.value)}
+                      onChange={e => setNote(e.target.value)}
                     />
                     <div className="od-comments">
-                      {(view.comments||[]).map((c, idx)=>(
+                      {(view.comments || []).map((c, idx) => (
                         <div key={idx} className="od-comment">
                           <div className="od-comment-text">{c.text}</div>
                           <div className="od-comment-meta">

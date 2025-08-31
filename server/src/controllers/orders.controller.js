@@ -100,27 +100,39 @@ exports.create = async function create(req, res, next) {
       return res.status(400).json({ message: 'No items in order' });
     }
 
-    // Products fetch (only assignedTo field)
+    // fetch products (with assignedTo + price)
     const productIds = body.items
       .map(i => i.product)
       .filter(id => mongoose.Types.ObjectId.isValid(id));
 
     const products = await Product.find({ _id: { $in: productIds } })
-      .select('_id assignedTo')
+      .select('_id assignedTo price')
       .lean();
 
     if (!products.length) return res.status(400).json({ message: 'Invalid products' });
 
-    // AssignedTo → jo product me assignedTo mila use le lo
+    // ✅ auto-assign staff (first product's assignedTo used)
     let assignedTo = null;
     for (const prod of products) {
       if (prod.assignedTo) {
-        assignedTo = prod.assignedTo; // ObjectId save होगा
+        assignedTo = prod.assignedTo;
         break;
       }
     }
 
-    // Order create
+    // build items
+    const items = body.items.map(it => {
+      const product = products.find(p => String(p._id) === String(it.product));
+      return {
+        product: it.product,
+        qty: it.qty || 1,
+        priceOverride: (it.price === null || it.price === undefined)
+          ? null
+          : Number(it.price),
+      };
+    });
+
+    // create order
     const order = await Order.create({
       info: {
         name: body.name,
@@ -132,12 +144,8 @@ exports.create = async function create(req, res, next) {
         paymentMethod: body.paymentMethod || 'COD',
       },
       status: 'new',
-      items: body.items.map(it => ({
-        product: it.product,
-        qty: it.qty || 1,
-        price: it.price || 0,
-      })),
-      assignedTo,
+      items,
+      assignedTo,   // ✅ save here
     });
 
     const fresh = await Order.findById(order._id)
@@ -147,7 +155,7 @@ exports.create = async function create(req, res, next) {
 
     res.json({ order: fresh });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Order create error:", err);
     next(err);
   }
 };
@@ -272,7 +280,7 @@ exports.updateItems = async function updateItems(req, res, next) {
         if (!prod) continue;
         const qty = Math.max(1, parseInt(it.qty || 1, 10));
         const price = (typeof it.price === 'number') ? it.price : (prod.price || 0);
-        normalized.push({ product: prod._id, qty, price });
+        normalized.push({ product: prod._id, qty, priceOverride: price });
       }
       o.items = normalized;
     }
