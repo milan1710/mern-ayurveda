@@ -9,6 +9,8 @@ export default function NavBar({ user, onLogout }) {
   const closeMenu = () => setOpen(false);
 
   const isStaff = user?.role === 'staff';
+  const isAdmin = user?.role === 'admin';
+  const isSubAdmin = user?.role === 'sub_admin';
 
   return (
     <header className="nv-nav">
@@ -16,7 +18,9 @@ export default function NavBar({ user, onLogout }) {
         <img src={logo} className="nv-logo nv-float" alt="Nature Vardan" />
         <div className="nv-brand">
           <strong>Nature Vardan</strong>
-          <span>{isStaff ? 'Staff Console' : 'Admin Console'}</span>
+          <span>
+            {isStaff ? 'Staff Console' : isSubAdmin ? 'Sub Admin Console' : 'Admin Console'}
+          </span>
         </div>
       </div>
 
@@ -39,6 +43,9 @@ export default function NavBar({ user, onLogout }) {
             <NavLink to="/categories" className="nv-link">Categories</NavLink>
             <NavLink to="/collections" className="nv-link">Collections</NavLink>
             <NavLink to="/staff" className="nv-link">Staff</NavLink>
+            {(isAdmin || isSubAdmin) && (
+              <NavLink to="/wallet" className="nv-link">Wallet</NavLink>
+            )}
           </>
         )}
       </nav>
@@ -63,6 +70,9 @@ export default function NavBar({ user, onLogout }) {
                 <NavLink onClick={closeMenu} to="/categories" className="nv-link">Categories</NavLink>
                 <NavLink onClick={closeMenu} to="/collections" className="nv-link">Collections</NavLink>
                 <NavLink onClick={closeMenu} to="/staff" className="nv-link">Staff</NavLink>
+                {(isAdmin || isSubAdmin) && (
+                  <NavLink onClick={closeMenu} to="/wallet" className="nv-link">Wallet</NavLink>
+                )}
               </>
             )}
           </nav>

@@ -22,6 +22,7 @@ import Products from './pages/Products';
 import './pages/Products.css';
 import Categories from './pages/Categories'; import './pages/Categories.css';
 import Collections from './pages/Collections'; import './pages/Collections.css';
+import Wallet from './pages/Wallet';   // ✅ NEW
 
 import api from './api';
 import { useEffect, useState } from 'react';
@@ -101,18 +102,29 @@ export default function App(){
           </ProtectedRoute>
         } />
 
-       {/* Staff management: admin & sub_admin */}
-<Route path="/staff" element={
-  <ProtectedRoute>
-    <RequireRole user={user} allow={['admin','sub_admin']}>
-      <Staff user={user} />
-    </RequireRole>
-    {!user?.role || (user?.role !== 'admin' && user?.role !== 'sub_admin')
-      ? <div className="container">Forbidden</div>
-      : null}
-  </ProtectedRoute>
-} />
+        {/* Staff management: admin & sub_admin */}
+        <Route path="/staff" element={
+          <ProtectedRoute>
+            <RequireRole user={user} allow={['admin','sub_admin']}>
+              <Staff user={user} />
+            </RequireRole>
+            {!user?.role || (user?.role !== 'admin' && user?.role !== 'sub_admin')
+              ? <div className="container">Forbidden</div>
+              : null}
+          </ProtectedRoute>
+        } />
 
+        {/* ✅ Wallet: admin & sub_admin */}
+        <Route path="/wallet" element={
+          <ProtectedRoute>
+            <RequireRole user={user} allow={['admin','sub_admin']}>
+              <Wallet user={user} />
+            </RequireRole>
+            {!user?.role || (user?.role !== 'admin' && user?.role !== 'sub_admin')
+              ? <div className="container">Forbidden</div>
+              : null}
+          </ProtectedRoute>
+        } />
 
         {/* Wildcard: staff => /orders, admin => / */}
         <Route path="*" element={<Navigate to={user?.role==='staff' ? '/orders' : '/'} replace />} />

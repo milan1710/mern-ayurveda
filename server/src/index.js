@@ -47,6 +47,8 @@ app.use('/api/upload', require('./routes/upload.routes'));
 app.use('/api/categories', require('./routes/categories.routes'));
 app.use('/api/collections', require('./routes/collections.routes'));
 app.use('/api/public', require('./routes/public.routes'));
+app.use('/api/wallet', require('./routes/wallet.routes'));
+
 
 /* ---------- 404 handler ---------- */
 app.use((req, res, _next) => {

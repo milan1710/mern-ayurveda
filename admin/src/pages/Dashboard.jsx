@@ -43,6 +43,10 @@ export default function Dashboard(){
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
 
+  // 👉 Wallet state
+  const [wallet, setWallet] = useState(0);
+  const [me, setMe] = useState(null);
+
   const applyPreset = (val) => {
     setPreset(val);
     if (val === 'this') {
@@ -78,6 +82,14 @@ export default function Dashboard(){
   useEffect(()=>{ fetchData(); /* eslint-disable-next-line */ }, []);
   useEffect(()=>{ fetchData(); /* eslint-disable-next-line */ }, [from, to, staff, preset]);
 
+  // 👉 Fetch current user (for wallet & role)
+  useEffect(()=>{
+    api.get("/auth/me").then(res=>{
+      setMe(res.data);
+      setWallet(res.data.walletBalance || 0);
+    }).catch(()=>{});
+  },[]);
+
   /* ---------- staff dropdown options from API ---------- */
   const staffOptions = useMemo(()=>{
     const list = Array.isArray(data?.staffUsers) ? data.staffUsers : [];
@@ -87,7 +99,6 @@ export default function Dashboard(){
   /* ---------- normalize counts & sales ---------- */
   const byStatus = useMemo(()=>{
     const raw = data?.byStatus || {};
-    // Make sure all keys exist with 0 default
     const out = {};
     STATUS_ORDER.forEach(k => { out[k] = Number(raw[k] || 0); });
     return out;
@@ -95,7 +106,6 @@ export default function Dashboard(){
 
   const totals = useMemo(()=>{
     const t = data?.totals || {};
-    // Fallbacks if backend didn't provide
     const totalOrders =
       t.totalOrders != null ? Number(t.totalOrders) :
       Object.values(byStatus).reduce((a,b)=>a+Number(b||0),0);
@@ -108,8 +118,6 @@ export default function Dashboard(){
       t.confirmedOrders != null ? Number(t.confirmedOrders) :
       Number(byStatus.confirmed || 0);
 
-    // Total Sales — strictly Placed orders amount
-    // Prefer totals.totalSalesPlaced → fallback sales.placed → 0
     const salesBlock = data?.sales || {};
     const totalSalesPlaced =
       t.totalSalesPlaced != null ? Number(t.totalSalesPlaced) :
@@ -119,6 +127,36 @@ export default function Dashboard(){
   }, [data, byStatus]);
 
   if (loading && !data) return <div className="container">Loading…</div>;
+
+  // 👉 Razorpay add funds
+  const handleAddFund = async () => {
+    const amount = prompt("Enter amount to add:");
+    if (!amount) return;
+
+    // Create order
+    const { data } = await api.post("/wallet/create-order", { amount });
+
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      amount: data.order.amount,
+      currency: "INR",
+      name: "Wallet Topup",
+      description: "Add funds to wallet",
+      order_id: data.order.id,
+      handler: async function (response) {
+        await api.post("/wallet/verify", {
+          subAdminId: me._id,
+          amount: parseInt(amount),
+          txnId: response.razorpay_payment_id
+        });
+        alert("Funds added successfully!");
+        setWallet(wallet + parseInt(amount));
+      }
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  };
 
   return (
     <div className="container">
@@ -185,6 +223,15 @@ export default function Dashboard(){
           <div className="kpi-value black">₹ {totals.totalSalesPlaced.toFixed(2)}</div>
           <div className="kpi-sub dim">*Placed* orders only</div>
         </div>
+
+        {/* 💰 Wallet (only for sub_admin) */}
+        {me?.role === 'sub_admin' && (
+          <div className="card glass kpi">
+            <div className="kpi-title">Wallet Balance</div>
+            <div className="kpi-value black">₹ {wallet}</div>
+            <button className="btn solid" onClick={handleAddFund}>Add Funds</button>
+          </div>
+        )}
       </div>
 
       {/* Status grid */}
