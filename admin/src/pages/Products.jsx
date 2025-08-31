@@ -4,7 +4,8 @@ import './Products.css';
 
 const emptyForm = {
   name:'', sku:'', price:'', oldPrice:'', stock:'',
-  description:'', category:'none', collection:'none', featured:false
+  description:'', category:'none', collection:'none', featured:false,
+  pixelId:'' // ✅ नया field
 };
 
 const API_PUBLIC_URL = import.meta.env.VITE_API_PUBLIC_URL || '';
@@ -112,7 +113,8 @@ export default function Products({ user }){
       description:p.description || '',
       category: p.category?._id || 'none',
       collection: p.collection?._id || 'none',
-      featured: Boolean(p.featured)
+      featured: Boolean(p.featured),
+      pixelId: p.pixelId || '' // ✅ Edit mode mein pixelId bhi load
     });
     setImgUrls(sanitizeUrls(Array.isArray(p.images)? p.images : []));
     setManualUrl('');
@@ -146,7 +148,8 @@ export default function Products({ user }){
       category: form.category || 'none',
       collection: form.collection || 'none',
       featured: Boolean(form.featured),
-      assignedTo: assignedTo || null
+      assignedTo: assignedTo || null,
+      pixelId: form.pixelId || '' // ✅ PixelId payload me
     };
 
     if(editing) await api.put(`/products/${editing}`, payload);
@@ -229,6 +232,7 @@ export default function Products({ user }){
               <th>Collection</th>
               <th>Featured</th>
               <th>Assigned To</th>
+              <th>Pixel ID</th> {/* ✅ नया column */}
               <th>Images</th>
               <th>Actions</th>
             </tr>
@@ -251,6 +255,7 @@ export default function Products({ user }){
                 <td>{p.collection?.name || '-'}</td>
                 <td>{p.featured ? 'Yes' : 'No'}</td>
                 <td>{renderAssigned(p.assignedTo)}</td>
+                <td>{p.pixelId || '-'}</td> {/* ✅ Pixel id show */}
                 <td className="mono img-links">
                   {(p.images||[]).slice(0,2).map((u,idx)=>
                     <a key={idx} href={toAbs(u)} target="_blank" rel="noreferrer">img{idx+1}</a>
@@ -267,7 +272,7 @@ export default function Products({ user }){
               </tr>
             ))}
             {items.length===0 && (
-              <tr><td colSpan={11} style={{textAlign:'center', opacity:.7, padding:'18px'}}>No products</td></tr>
+              <tr><td colSpan={12} style={{textAlign:'center', opacity:.7, padding:'18px'}}>No products</td></tr>
             )}
           </tbody>
         </table>
@@ -307,6 +312,11 @@ export default function Products({ user }){
                     <input type="checkbox" checked={form.featured} onChange={e=>setForm(f=>({...f, featured:e.target.checked}))}/>
                     <span>Featured</span>
                   </label>
+                </div>
+
+                {/* ✅ Pixel ID field */}
+                <div className="row">
+                  <input className="input" placeholder="Facebook Pixel ID" value={form.pixelId} onChange={e=>setForm(f=>({...f, pixelId:e.target.value}))}/>
                 </div>
 
                 <div className="row">

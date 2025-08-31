@@ -1,9 +1,8 @@
-// store/src/pages/Product.jsx
 import './Product.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api';
-import { trackViewContent } from '../lib/pixel'; // ✅ Pixel
+import { initPixel, trackViewContent } from '../lib/pixel'; // ✅ Pixel
 
 export default function Product(){
   const { id } = useParams();
@@ -14,20 +13,35 @@ export default function Product(){
   useEffect(()=>{
     window.scrollTo(0,0);
     setLoading(true);
+
     api.get(`/public/products/${id}`)
       .then(r => {
         const prod = r.data?.product || null;
         setP(prod);
         setActive(0);
 
-        // ✅ ViewContent event
         if (prod) {
-          trackViewContent({
-            id: prod._id,
-            name: prod.name,
-            price: prod.price,
-            currency: 'INR'
-          });
+          // ✅ Default pixel init (.env से)
+          if (import.meta.env.VITE_PIXEL_ID) {
+            initPixel(import.meta.env.VITE_PIXEL_ID);
+            trackViewContent({
+              id: prod._id,
+              name: prod.name,
+              price: prod.price,
+              currency: 'INR'
+            }, import.meta.env.VITE_PIXEL_ID);
+          }
+
+          // ✅ Product-specific pixel init (backend से)
+          if (prod.pixelId) {
+            initPixel(prod.pixelId);
+            trackViewContent({
+              id: prod._id,
+              name: prod.name,
+              price: prod.price,
+              currency: 'INR'
+            }, prod.pixelId);
+          }
         }
       })
       .catch(()=> setP(null))

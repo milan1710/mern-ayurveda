@@ -94,7 +94,8 @@ exports.create = async (req, res) => {
       collection: body.collection && body.collection !== 'none' ? body.collection : null,
       createdBy: req.user._id,
       createdByRole: req.user.role,
-      assignedTo,   // ✅ अब सही तरीके से save होगा
+      assignedTo,
+      pixelId: body.pixelId || null   // ✅ Pixel ID save
     });
 
     res.json({ product: doc });
@@ -127,6 +128,11 @@ exports.update = async (req, res) => {
       p.assignedTo = body.assignedTo;
     } else if (body.assignedTo === null || body.assignedTo === '') {
       p.assignedTo = null; // unassign
+    }
+
+    // ✅ Pixel ID update
+    if (body.pixelId !== undefined) {
+      p.pixelId = body.pixelId || null;
     }
 
     await p.save();

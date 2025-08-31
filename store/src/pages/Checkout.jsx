@@ -1,4 +1,3 @@
-// store/src/pages/Checkout.jsx
 import './Checkout.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -75,12 +74,22 @@ export default function Checkout(){
       };
       await api.post('/public/orders', payload);
 
-      // ✅ Pixel: Purchase (thank you)
-      trackPurchase({
-        items: [{ product: product._id, qty, price: Number(product.price || 0) }],
-        value: Number(total || 0),
-        currency: 'INR'
-      });
+      // ✅ Pixel: Purchase event (दोनों pixels पर fire करो)
+      if (import.meta.env.VITE_PIXEL_ID) {
+        trackPurchase({
+          items: [{ product: product._id, qty, price: Number(product.price || 0) }],
+          value: Number(total || 0),
+          currency: 'INR'
+        }, import.meta.env.VITE_PIXEL_ID);
+      }
+
+      if (product.pixelId) {
+        trackPurchase({
+          items: [{ product: product._id, qty, price: Number(product.price || 0) }],
+          value: Number(total || 0),
+          currency: 'INR'
+        }, product.pixelId);
+      }
 
       setDone(true);
     }catch(e){

@@ -13,7 +13,10 @@ const productSchema = new Schema({
   category: { type: Types.ObjectId, ref: 'Category', default: null },
   collection: { type: Types.ObjectId, ref: 'Collection', default: null },
 
-  // ✅ New fields
+  // ✅ Tracking pixel per product
+  pixelId: { type: String, default: null },
+
+  // ✅ New fields (already in your code)
   createdBy: { type: Types.ObjectId, ref: 'User', required: true },
   createdByRole: { type: String, enum: ['admin', 'sub_admin', 'staff'], required: true },
   assignedTo: { type: Types.ObjectId, ref: 'User', default: null }

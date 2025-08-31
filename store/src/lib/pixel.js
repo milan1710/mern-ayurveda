@@ -1,4 +1,3 @@
-// store/src/lib/pixel.js
 let loaded = false;
 let currentId = null;
 
@@ -13,7 +12,6 @@ let currentId = null;
 
 export function initPixel(pixelId) {
   if (typeof window === 'undefined' || !pixelId) return;
-  if (loaded && currentId === pixelId) return;
 
   // अगर अलग ID है या पहली बार है, script लगाओ
   if (!document.getElementById('meta-pixel-script')) {
@@ -24,39 +22,63 @@ export function initPixel(pixelId) {
     document.head.appendChild(s);
   }
 
+  // ✅ हर pixel id के लिए अलग init
   window.fbq('init', pixelId);
-  loaded = true;
-  currentId = pixelId;
 }
 
-export function trackPageView() {
+export function trackPageView(extraPixelId=null) {
   if (typeof window === 'undefined' || !window.fbq) return;
+
+  // default pixel
   window.fbq('track', 'PageView');
+
+  // product pixel (optional)
+  if (extraPixelId) {
+    window.fbq('trackSingle', extraPixelId, 'PageView');
+  }
 }
 
-export function trackViewContent({ id, name, price, currency = 'INR' }) {
+export function trackViewContent({ id, name, price, currency = 'INR' }, extraPixelId=null) {
   if (typeof window === 'undefined' || !window.fbq) return;
-  window.fbq('track', 'ViewContent', {
+
+  const payload = {
     content_ids: id ? [String(id)] : undefined,
     content_name: name,
     content_type: 'product',
     value: Number(price || 0),
     currency
-  });
+  };
+
+  // default pixel
+  window.fbq('track', 'ViewContent', payload);
+
+  // product pixel
+  if (extraPixelId) {
+    window.fbq('trackSingle', extraPixelId, 'ViewContent', payload);
+  }
 }
 
-export function trackPurchase({ items = [], value = 0, currency = 'INR' }) {
+export function trackPurchase({ items = [], value = 0, currency = 'INR' }, extraPixelId=null) {
   if (typeof window === 'undefined' || !window.fbq) return;
-  // contents array (optional but nice)
+
   const contents = items.map(it => ({
     id: String(it.product || it.id || ''),
     quantity: Number(it.qty || 1),
     item_price: Number(it.price || 0)
   }));
-  window.fbq('track', 'Purchase', {
+
+  const payload = {
     value: Number(value || 0),
     currency,
     contents,
     content_type: 'product'
-  });
+  };
+
+  // default pixel
+  window.fbq('track', 'Purchase', payload);
+
+  // product pixel
+  if (extraPixelId) {
+    window.fbq('trackSingle', extraPixelId, 'Purchase', payload);
+  }
 }
