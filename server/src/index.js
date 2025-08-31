@@ -6,6 +6,8 @@ const morgan = require('morgan');
 const path = require('path');
 
 const connectDB = require('./config/db');
+const superAdminRoutes = require('./routes/superAdmin');
+
 
 const app = express();
 
@@ -48,6 +50,7 @@ app.use('/api/categories', require('./routes/categories.routes'));
 app.use('/api/collections', require('./routes/collections.routes'));
 app.use('/api/public', require('./routes/public.routes'));
 app.use('/api/wallet', require('./routes/wallet.routes'));
+app.use('/api/super-admin', superAdminRoutes);
 
 
 /* ---------- 404 handler ---------- */

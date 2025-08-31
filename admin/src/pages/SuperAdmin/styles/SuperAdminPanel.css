@@ -1,0 +1,12 @@
+.superadmin-wrapper {
+  padding: 2rem;
+  background: #f1f5f9;
+  min-height: 100vh;
+}
+
+.superadmin-wrapper h1 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  font-weight: bold;
+  color: #1e293b;
+}

@@ -23,6 +23,7 @@ import './pages/Products.css';
 import Categories from './pages/Categories'; import './pages/Categories.css';
 import Collections from './pages/Collections'; import './pages/Collections.css';
 import Wallet from './pages/Wallet';   // ✅ NEW
+import SuperAdminPanel from "./pages/SuperAdmin/SuperAdminPanel";
 
 import api from './api';
 import { useEffect, useState } from 'react';
@@ -128,6 +129,7 @@ export default function App(){
 
         {/* Wildcard: staff => /orders, admin => / */}
         <Route path="*" element={<Navigate to={user?.role==='staff' ? '/orders' : '/'} replace />} />
+         <Route path="/super-admin" element={<SuperAdminPanel />} />
       </Routes>
     </>
   );
