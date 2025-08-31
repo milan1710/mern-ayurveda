@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
-const WalletTx = require('../models/WalletTx'); // 👈 add transaction logging
+const WalletTx = require('../models/WalletTx'); // 👈 transaction logging
 
 function isAdmin(user) { return user && user.role === 'admin'; }
 function isSubAdmin(user) { return user && user.role === 'sub_admin'; }
@@ -233,6 +233,7 @@ exports.assign = async function assign(req, res, next) {
     if (!o) return res.status(404).json({ message: 'Order not found' });
 
     if (!staffId) {
+      // unassign case
       o.assignedTo = null;
     } else {
       if (!mongoose.Types.ObjectId.isValid(staffId)) {
@@ -250,12 +251,12 @@ exports.assign = async function assign(req, res, next) {
       if (!staffUser) return res.status(404).json({ message: 'Staff not found' });
 
       // ✅ Wallet deduction logic
-      let charge = 0;
       if (staffUser.applyCharge) {
-        charge = staffUser.orderCharge > 0 ? staffUser.orderCharge : 20;
+        const charge = staffUser.orderCharge > 0 ? staffUser.orderCharge : 20;
         if (staffUser.wallet < charge) {
           return res.status(400).json({ message: `Insufficient balance. Need ₹${charge} in wallet.` });
         }
+
         staffUser.wallet -= charge;
         await staffUser.save();
 
@@ -284,8 +285,12 @@ exports.assign = async function assign(req, res, next) {
       .lean();
 
     res.json({ order: fresh });
-  } catch (err) { next(err); }
+  } catch (err) {
+    console.error("❌ Assign error:", err);
+    next(err);
+  }
 };
+
 
 /* -------------------- UPDATE ITEMS -------------------- */
 exports.updateItems = async function updateItems(req, res, next) {

@@ -40,7 +40,7 @@ exports.logout = async (_req, res) => {
   res.json({ ok:true });
 };
 
-// ✅ Me (returns full user info including wallet + orderCharge settings)
+// ✅ Me (returns wallet + charge info also)
 exports.me = async (req, res) => {
   try {
     if(!req.user) return res.status(401).json({ message:'Unauthorized' });
@@ -54,14 +54,14 @@ exports.me = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        wallet: user.wallet,
         parent: user.parent,
-        applyCharge: user.applyCharge || false,   // ✅ required
-        orderCharge: user.orderCharge || 0        // ✅ required
+        wallet: user.wallet,
+        applyCharge: user.applyCharge || false,
+        orderCharge: user.orderCharge || 0
       }
     });
   } catch (err) {
-    console.error(err);
+    console.error("Me API error:", err);
     res.status(500).json({ message: "Failed to fetch user" });
   }
 };

@@ -29,7 +29,7 @@ exports.listStaff = async (req, res) => {
 // ----------------------------
 exports.createStaff = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body || {};
+    const { name, email, password, role, applyCharge, orderCharge } = req.body || {};
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Missing fields' });
     }
@@ -56,6 +56,9 @@ exports.createStaff = async (req, res) => {
       email: String(email).toLowerCase(),
       password: hash,
       role: newRole,
+      // ✅ save charge settings if provided
+      applyCharge: !!applyCharge,
+      orderCharge: Number(orderCharge) || 0,
     };
 
     // Agar sub_admin staff create kare → parent=sub_admin._id
@@ -72,6 +75,47 @@ exports.createStaff = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ----------------------------
+// Update Staff/SubAdmin
+// ----------------------------
+exports.updateStaff = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { name, email, password, applyCharge, orderCharge } = req.body || {};
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Agar sub_admin hai → sirf apne staff ko edit कर सकता है
+    if (req.user.role === 'sub_admin') {
+      if (String(user.parent) !== String(req.user._id) || user.role !== 'staff') {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+    }
+
+    if (name) user.name = name;
+    if (email) user.email = String(email).toLowerCase();
+    if (password) {
+      const hash = await bcrypt.hash(password, 10);
+      user.password = hash;
+    }
+
+    // ✅ update charge settings
+    if (applyCharge !== undefined) user.applyCharge = !!applyCharge;
+    if (orderCharge !== undefined) user.orderCharge = Number(orderCharge) || 0;
+
+    await user.save();
+
+    const safe = user.toObject();
+    delete safe.password;
+
+    res.json({ user: safe });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Update failed' });
   }
 };
 

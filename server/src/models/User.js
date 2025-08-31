@@ -1,20 +1,10 @@
 const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
-const userSchema = new mongoose.Schema({
-  name: { 
-    type: String, 
-    required: true 
-  },
-
-  email: { 
-    type: String, 
-    unique: true 
-  },
-
-  password: { 
-    type: String, 
-    required: true 
-  },
+const userSchema = new Schema({
+  name: { type: String, required: true },
+  email: { type: String, unique: true },
+  password: { type: String, required: true },
 
   role: {
     type: String,
@@ -23,25 +13,15 @@ const userSchema = new mongoose.Schema({
   },
 
   parent: { 
-    type: mongoose.Schema.Types.ObjectId, 
+    type: Schema.Types.ObjectId, 
     ref: 'User',
     default: null
-  }, // 👈 sub_admin parent for staff
+  }, // sub_admin parent for staff
 
-  wallet: { 
-    type: Number, 
-    default: 0 
-  }, // 👈 ✅ wallet balance field
+  wallet: { type: Number, default: 0 },   // ✅ wallet balance
 
-  orderCharge: { 
-    type: Number, 
-    default: 0 
-  }, // 👈 minimum balance required for order access
-
-  applyCharge: { 
-    type: Boolean, 
-    default: false 
-  } // 👈 whether charge check is applied
+  orderCharge: { type: Number, default: 20 },   // ✅ default ₹20
+applyCharge: { type: Boolean, default: true } // ✅ default true
 }, { timestamps: true });
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.models.User || mongoose.model('User', userSchema);
