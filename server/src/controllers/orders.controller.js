@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
+const WalletTx = require('../models/WalletTx'); // 👈 add transaction logging
 
 function isAdmin(user) { return user && user.role === 'admin'; }
 function isSubAdmin(user) { return user && user.role === 'sub_admin'; }
@@ -100,7 +101,6 @@ exports.create = async function create(req, res, next) {
       return res.status(400).json({ message: 'No items in order' });
     }
 
-    // fetch products (with assignedTo + price)
     const productIds = body.items
       .map(i => i.product)
       .filter(id => mongoose.Types.ObjectId.isValid(id));
@@ -111,7 +111,6 @@ exports.create = async function create(req, res, next) {
 
     if (!products.length) return res.status(400).json({ message: 'Invalid products' });
 
-    // ✅ auto-assign staff (first product's assignedTo used)
     let assignedTo = null;
     for (const prod of products) {
       if (prod.assignedTo) {
@@ -120,7 +119,6 @@ exports.create = async function create(req, res, next) {
       }
     }
 
-    // build items
     const items = body.items.map(it => {
       const product = products.find(p => String(p._id) === String(it.product));
       return {
@@ -132,7 +130,6 @@ exports.create = async function create(req, res, next) {
       };
     });
 
-    // create order
     const order = await Order.create({
       info: {
         name: body.name,
@@ -145,7 +142,7 @@ exports.create = async function create(req, res, next) {
       },
       status: 'new',
       items,
-      assignedTo,   // ✅ save here
+      assignedTo,
     });
 
     const fresh = await Order.findById(order._id)
@@ -247,6 +244,33 @@ exports.assign = async function assign(req, res, next) {
         if (!staff) {
           return res.status(403).json({ message: 'Not your staff' });
         }
+      }
+
+      const staffUser = await User.findById(staffId);
+      if (!staffUser) return res.status(404).json({ message: 'Staff not found' });
+
+      // ✅ Wallet deduction logic
+      let charge = 0;
+      if (staffUser.applyCharge) {
+        charge = staffUser.orderCharge > 0 ? staffUser.orderCharge : 20;
+        if (staffUser.wallet < charge) {
+          return res.status(400).json({ message: `Insufficient balance. Need ₹${charge} in wallet.` });
+        }
+        staffUser.wallet -= charge;
+        await staffUser.save();
+
+        await WalletTx.create({
+          user: staffUser._id,
+          amount: charge,
+          type: 'debit',
+          method: 'order_assign',
+          status: 'success',
+          meta: {
+            orderId: o._id,
+            customerName: o.info?.name,
+            customerPhone: o.info?.phone
+          }
+        });
       }
 
       o.assignedTo = new mongoose.Types.ObjectId(staffId);

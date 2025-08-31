@@ -4,10 +4,11 @@ const allowRoles = require('../middleware/allowRoles');
 const razorpay = require('../config/razorpay');
 const WalletTx = require('../models/WalletTx');
 const User = require('../models/User');
+const Order = require('../models/Order'); // ✅ order info ke liye
 const crypto = require('crypto');
 
 /**
- * Create Razorpay Order
+ * Create Razorpay Order (Add Funds)
  */
 router.post('/create-order', requireAuth, allowRoles('sub_admin'), async (req, res) => {
   try {
@@ -30,7 +31,7 @@ router.post('/create-order', requireAuth, allowRoles('sub_admin'), async (req, r
       amount,
       type: 'credit',
       method: 'razorpay',
-      txnId: order.id,  // store Razorpay order id
+      txnId: order.id,  // Razorpay order id
       status: 'pending',
     });
 
@@ -70,7 +71,7 @@ router.post('/verify', requireAuth, allowRoles('sub_admin'), async (req, res) =>
     txn.status = 'success';
     await txn.save();
 
-    // ✅ Ensure wallet field exists (default 0)
+    // ✅ Ensure wallet field exists
     const user = await User.findById(txn.user);
     if (typeof user.wallet !== 'number') user.wallet = 0;
     user.wallet += txn.amount;
@@ -108,6 +109,60 @@ router.get('/transactions', requireAuth, allowRoles('sub_admin'), async (req, re
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Transactions fetch failed' });
+  }
+});
+
+/**
+ * Deduct ₹20 for Order Assignment
+ */
+router.post('/deduct-for-order', requireAuth, allowRoles('sub_admin'), async (req, res) => {
+  try {
+    const { orderId } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({ message: 'Order ID required' });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+
+    const subAdmin = await User.findById(req.user._id);
+    if (!subAdmin) return res.status(404).json({ message: 'Sub Admin not found' });
+
+    // ✅ Balance check
+    if (subAdmin.wallet < 20) {
+      return res.status(400).json({
+        message: 'Insufficient wallet balance. Please add funds to assign orders.',
+        requireTopUp: true
+      });
+    }
+
+    // ✅ Deduct ₹20
+    subAdmin.wallet -= 20;
+    await subAdmin.save();
+
+    // ✅ Record transaction
+    const txn = await WalletTx.create({
+      user: subAdmin._id,
+      amount: 20,
+      type: 'debit',
+      method: 'order_assign',
+      status: 'success',
+      meta: {
+        orderId: order._id,
+        customerName: order.info?.name,
+        customerPhone: order.info?.phone
+      }
+    });
+
+    // ✅ Assign order
+    order.assignedTo = subAdmin._id;
+    await order.save();
+
+    res.json({ message: '₹20 deducted & order assigned', order, wallet: subAdmin.wallet, txn });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Deduction failed' });
   }
 });
 

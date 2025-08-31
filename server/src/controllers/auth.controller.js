@@ -14,6 +14,7 @@ function signToken(user) {
   });
 }
 
+// ✅ Login
 exports.login = async (req, res) => {
   const { email, password } = req.body || {};
   if(!email || !password) return res.status(400).json({ message:'Email & password required' });
@@ -26,16 +27,41 @@ exports.login = async (req, res) => {
 
   const token = signToken(user);
   res.cookie('token', token, cookieOptions());
-  const safe = user.toObject(); delete safe.password;
+
+  const safe = user.toObject();
+  delete safe.password;
+
   res.json({ user: safe });
 };
 
+// ✅ Logout
 exports.logout = async (_req, res) => {
   res.clearCookie('token', { path:'/' });
   res.json({ ok:true });
 };
 
+// ✅ Me (returns full user info including wallet + orderCharge settings)
 exports.me = async (req, res) => {
-  if(!req.user) return res.status(401).json({ message:'Unauthorized' });
-  res.json({ user:req.user });
+  try {
+    if(!req.user) return res.status(401).json({ message:'Unauthorized' });
+
+    const user = await User.findById(req.user._id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        wallet: user.wallet,
+        parent: user.parent,
+        applyCharge: user.applyCharge || false,   // ✅ required
+        orderCharge: user.orderCharge || 0        // ✅ required
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch user" });
+  }
 };

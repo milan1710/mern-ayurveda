@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import './Orders.css';
+import RequireWalletBalance from '../components/RequireWalletBalance';
 
 const STATUSES = [
   { value: 'new', label: 'New' },
@@ -464,6 +465,15 @@ export default function Orders({ user }) {
           </div>
         </div>
       )}
+
+      return (
+  <RequireWalletBalance>
+    <div className="container">
+      {/* yaha aapka pura existing orders table + modal code rahega */}
+    </div>
+  </RequireWalletBalance>
+);
+
 
     </div>
   );

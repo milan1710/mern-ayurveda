@@ -1,9 +1,20 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, unique: true },
-  password: { type: String, required: true },
+  name: { 
+    type: String, 
+    required: true 
+  },
+
+  email: { 
+    type: String, 
+    unique: true 
+  },
+
+  password: { 
+    type: String, 
+    required: true 
+  },
 
   role: {
     type: String,
@@ -20,7 +31,17 @@ const userSchema = new mongoose.Schema({
   wallet: { 
     type: Number, 
     default: 0 
-  } // 👈 ✅ wallet balance field
+  }, // 👈 ✅ wallet balance field
+
+  orderCharge: { 
+    type: Number, 
+    default: 0 
+  }, // 👈 minimum balance required for order access
+
+  applyCharge: { 
+    type: Boolean, 
+    default: false 
+  } // 👈 whether charge check is applied
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

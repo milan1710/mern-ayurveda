@@ -13,7 +13,15 @@ export default function Staff({ user }) {
 
   // Add Staff modal
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', role: 'staff' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'staff',
+    orderCharge: 0,
+    applyCharge: false
+  });
   const [saving, setSaving] = useState(false);
 
   // fetch staff/sub_admin list
@@ -50,7 +58,15 @@ export default function Staff({ user }) {
   }, [items, q]);
 
   const openAdd = () => {
-    setForm({ name: '', email: '', phone: '', password: '', role: 'staff' });
+    setForm({
+      name: '',
+      email: '',
+      phone: '',
+      password: '',
+      role: 'staff',
+      orderCharge: 0,
+      applyCharge: false
+    });
     setOpen(true);
   };
 
@@ -67,7 +83,9 @@ export default function Staff({ user }) {
         email: form.email.trim(),
         phone: form.phone.trim(),
         password: form.password,
-        role: form.role
+        role: form.role,
+        orderCharge: Number(form.orderCharge) || 0,
+        applyCharge: !!form.applyCharge
       });
       setOpen(false);
       await fetchStaff();
@@ -113,7 +131,8 @@ export default function Staff({ user }) {
           <table className="table">
             <thead>
               <tr>
-                <th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Actions</th>
+                <th>#</th><th>Name</th><th>Email</th><th>Phone</th>
+                <th>Role</th><th>Order Charge</th><th>Apply?</th><th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -124,6 +143,8 @@ export default function Staff({ user }) {
                   <td>{s.email || '-'}</td>
                   <td>{s.phone || '-'}</td>
                   <td>{s.role || '-'}</td>
+                  <td>₹{s.orderCharge || 0}</td>
+                  <td>{s.applyCharge ? 'Yes' : 'No'}</td>
                   <td>
                     <div className="row">
                       <button className="btn ghost danger" onClick={() => del(s._id)}>Delete</button>
@@ -170,6 +191,25 @@ export default function Staff({ user }) {
                     <option value="staff">Staff</option>
                     {isAdmin && <option value="sub_admin">Sub Admin</option>}
                   </select>
+                </div>
+
+                {/* Order Charge + Apply Charge */}
+                <div className="row">
+                  <input
+                    className="input"
+                    type="number"
+                    placeholder="Order Assign Charge (₹)"
+                    value={form.orderCharge}
+                    onChange={e => setForm(f => ({ ...f, orderCharge: e.target.value }))}
+                  />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input
+                      type="checkbox"
+                      checked={form.applyCharge}
+                      onChange={e => setForm(f => ({ ...f, applyCharge: e.target.checked }))}
+                    />
+                    Apply Charge?
+                  </label>
                 </div>
 
                 <div className="row modal-actions">
