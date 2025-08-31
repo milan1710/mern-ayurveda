@@ -2,9 +2,11 @@ const router = require('express').Router();
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Order = require('../models/Order');
+const User = require('../models/User');
+const WalletTx = require('../models/WalletTx');
 const mongoose = require('mongoose');
 
-// Public: List products (with optional featured/limit/q)
+// Public: List products
 router.get('/products', async (req, res) => {
   const { featured, q = '', limit = 60 } = req.query;
   const where = {};
@@ -48,7 +50,7 @@ router.post('/orders', async (req, res) => {
     return res.status(400).json({ message: 'Invalid product in items' });
   }
 
-  // ✅ auto-assign staff (first product's assignedTo used)
+  // auto-assign staff (first product's assignedTo used)
   let assignedTo = null;
   for (const prod of products) {
     if (prod.assignedTo) {
@@ -82,8 +84,38 @@ router.post('/orders', async (req, res) => {
     },
     status: 'new',
     items: orderItems,
-    assignedTo,   // ✅ save staff assignment here
+    assignedTo,
   });
+
+  // ✅ Wallet deduction if assigned to SubAdmin
+  if (assignedTo) {
+    const subAdmin = await User.findById(assignedTo);
+    if (subAdmin && subAdmin.role === 'sub_admin') {
+      const charge = subAdmin.orderCharge > 0 ? subAdmin.orderCharge : 20;
+
+      if (subAdmin.wallet < charge) {
+        return res.status(400).json({
+          message: `Insufficient balance in Sub Admin wallet (Need ₹${charge})`
+        });
+      }
+
+      subAdmin.wallet -= charge;
+      await subAdmin.save();
+
+      await WalletTx.create({
+        user: subAdmin._id,
+        amount: charge,
+        type: 'debit',
+        method: 'public_order',
+        status: 'success',
+        meta: {
+          orderId: order._id,
+          customerName: info.name,
+          customerPhone: info.phone
+        }
+      });
+    }
+  }
 
   res.json({ order });
 });

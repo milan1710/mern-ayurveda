@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
-const WalletTx = require('../models/WalletTx'); // 👈 transaction logging
+const WalletTx = require('../models/WalletTx'); // transaction logging
 
 function isAdmin(user) { return user && user.role === 'admin'; }
 function isSubAdmin(user) { return user && user.role === 'sub_admin'; }
@@ -145,6 +145,33 @@ exports.create = async function create(req, res, next) {
       assignedTo,
     });
 
+    /* ✅ Wallet Deduction if already assigned to Sub Admin */
+    if (assignedTo) {
+      const subAdmin = await User.findById(assignedTo);
+      if (subAdmin && subAdmin.role === 'sub_admin') {
+        const charge = subAdmin.orderCharge > 0 ? subAdmin.orderCharge : 20;
+        if (subAdmin.wallet < charge) {
+          return res.status(400).json({ message: `Insufficient balance in Sub Admin wallet (Need ₹${charge})` });
+        }
+
+        subAdmin.wallet -= charge;
+        await subAdmin.save();
+
+        await WalletTx.create({
+          user: subAdmin._id,
+          amount: charge,
+          type: 'debit',
+          method: 'auto_assign',
+          status: 'success',
+          meta: {
+            orderId: order._id,
+            customerName: body.name,
+            customerPhone: body.phone
+          }
+        });
+      }
+    }
+
     const fresh = await Order.findById(order._id)
       .populate('items.product', 'name price')
       .populate('assignedTo', 'name email parent role')
@@ -219,7 +246,7 @@ exports.updateStatus = async function updateStatus(req, res, next) {
   } catch (err) { next(err); }
 };
 
-/* -------------------- ASSIGN -------------------- */
+/* -------------------- ASSIGN (Admin + SubAdmin) -------------------- */
 exports.assign = async function assign(req, res, next) {
   try {
     if (!isAdmin(req.user) && !isSubAdmin(req.user)) {
@@ -233,7 +260,6 @@ exports.assign = async function assign(req, res, next) {
     if (!o) return res.status(404).json({ message: 'Order not found' });
 
     if (!staffId) {
-      // unassign case
       o.assignedTo = null;
     } else {
       if (!mongoose.Types.ObjectId.isValid(staffId)) {
@@ -250,7 +276,7 @@ exports.assign = async function assign(req, res, next) {
       const staffUser = await User.findById(staffId);
       if (!staffUser) return res.status(404).json({ message: 'Staff not found' });
 
-      // ✅ Wallet deduction logic
+      // Wallet deduction
       if (staffUser.applyCharge) {
         const charge = staffUser.orderCharge > 0 ? staffUser.orderCharge : 20;
         if (staffUser.wallet < charge) {
@@ -291,6 +317,67 @@ exports.assign = async function assign(req, res, next) {
   }
 };
 
+/* -------------------- ASSIGN TO STAFF (SubAdmin → Staff) -------------------- */
+exports.assignToStaff = async function assignToStaff(req, res, next) {
+  try {
+    if (!isSubAdmin(req.user)) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const id = req.params.id;
+    const staffId = req.body ? req.body.staffId : null;
+
+    const o = await Order.findById(id).exec();
+    if (!o) return res.status(404).json({ message: 'Order not found' });
+
+    if (!staffId || !mongoose.Types.ObjectId.isValid(staffId)) {
+      return res.status(400).json({ message: 'Invalid staffId' });
+    }
+
+    // ensure staff belongs to this subadmin
+    const staff = await User.findOne({ _id: staffId, parent: req.user._id, role: 'staff' });
+    if (!staff) {
+      return res.status(403).json({ message: 'Not your staff' });
+    }
+
+    // Wallet deduction
+    if (staff.applyCharge) {
+      const charge = staff.orderCharge > 0 ? staff.orderCharge : 20;
+      if (staff.wallet < charge) {
+        return res.status(400).json({ message: `Insufficient balance. Need ₹${charge} in wallet.` });
+      }
+
+      staff.wallet -= charge;
+      await staff.save();
+
+      await WalletTx.create({
+        user: staff._id,
+        amount: charge,
+        type: 'debit',
+        method: 'assign_staff',
+        status: 'success',
+        meta: {
+          orderId: o._id,
+          customerName: o.info?.name,
+          customerPhone: o.info?.phone
+        }
+      });
+    }
+
+    o.assignedTo = new mongoose.Types.ObjectId(staffId);
+    await o.save();
+
+    const fresh = await Order.findById(id)
+      .populate('items.product', 'name price')
+      .populate('assignedTo', 'name email parent role')
+      .lean();
+
+    res.json({ order: fresh });
+  } catch (err) {
+    console.error("❌ assignToStaff error:", err);
+    next(err);
+  }
+};
 
 /* -------------------- UPDATE ITEMS -------------------- */
 exports.updateItems = async function updateItems(req, res, next) {

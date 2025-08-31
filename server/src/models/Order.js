@@ -30,7 +30,10 @@ const orderSchema = new Schema({
   items: [orderItemSchema],
 
   // ✅ Order auto-assign to subAdmin (from Product)
-  assignedTo: { type: Types.ObjectId, ref: 'User', default: null },
+  assignedTo: { type: Types.ObjectId, ref: 'User', default: null }, // sub_admin
+
+  // ✅ SubAdmin → Staff assignment
+  staffAssignedTo: { type: Types.ObjectId, ref: 'User', default: null },
 
   comments: [commentSchema]
 }, { timestamps: true });

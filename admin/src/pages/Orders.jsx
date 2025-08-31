@@ -21,11 +21,13 @@ const emptyView = {
   status: 'new',
   items: [],
   assignedTo: null,
+  staffAssignedTo: null,
   comments: []
 };
 
 export default function Orders({ user }) {
   const isAdmin = user?.role === 'admin';
+  const isSubAdmin = user?.role === 'sub_admin';
 
   const [items, setItems] = useState([]);
   const [q, setQ] = useState('');
@@ -39,17 +41,14 @@ export default function Orders({ user }) {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
-  // staff list (for assign)
   const [staff, setStaff] = useState([]);
-  // comment
   const [note, setNote] = useState('');
 
-  // form state inside modal (split first/last + status + assigned)
   const [form, setForm] = useState({
     firstName: '', lastName: '', phone: '',
     address: '', city: '', state: '', pin: '',
     paymentMethod: 'COD', status: 'new',
-    assigned: '' // staff id
+    assigned: '' 
   });
 
   const fetchData = async () => {
@@ -65,7 +64,7 @@ export default function Orders({ user }) {
   useEffect(() => { fetchData(); /* eslint-disable-next-line */ }, [q, status, page]);
 
   const fetchStaff = async () => {
-    if (!isAdmin) return;
+    if (!isAdmin && !isSubAdmin) return;
     try {
       const { data } = await api.get('/users/staff');
       setStaff(data.items || []);
@@ -73,9 +72,8 @@ export default function Orders({ user }) {
       setStaff([]);
     }
   };
-  useEffect(() => { fetchStaff(); /* eslint-disable-next-line */ }, [isAdmin]);
+  useEffect(() => { fetchStaff(); /* eslint-disable-next-line */ }, [isAdmin, isSubAdmin]);
 
-  // Helpers
   const splitName = (full = '') => {
     const parts = String(full).trim().split(/\s+/);
     if (parts.length === 0) return { firstName: '', lastName: '' };
@@ -102,8 +100,7 @@ export default function Orders({ user }) {
       pin: o.info?.pin || '',
       paymentMethod: o.info?.paymentMethod || 'COD',
       status: o.status || 'new',
-      // ✅ assigned auto select if already assigned
-      assigned: (o.assignedTo?._id || o.assignedTo || '') || '',
+      assigned: (o.staffAssignedTo?._id || o.staffAssignedTo || o.assignedTo?._id || o.assignedTo || '') || '',
     });
 
     setNote('');
@@ -149,7 +146,6 @@ export default function Orders({ user }) {
     e.preventDefault();
     setSaving(true); setErr('');
     try {
-      // 1) update info
       await api.put(`/orders/${view._id}/info`, {
         firstName: form.firstName,
         lastName: form.lastName,
@@ -161,20 +157,18 @@ export default function Orders({ user }) {
         paymentMethod: form.paymentMethod
       });
 
-      // 2) update status if changed
       if ((view.status || '') !== (form.status || '')) {
         await api.put(`/orders/${view._id}/status`, { status: form.status });
       }
 
-      // 3) update assignment (admin only)
-      if (isAdmin) {
-        const currentAssigned = (view.assignedTo?._id || view.assignedTo || '') || '';
+      if (isAdmin || isSubAdmin) {
+        const currentAssigned = (view.staffAssignedTo?._id || view.staffAssignedTo || view.assignedTo?._id || view.assignedTo || '') || '';
         if (String(currentAssigned) !== String(form.assigned || '')) {
-          await api.put(`/orders/${view._id}/assign`, { staffId: form.assigned || null });
+          const endpoint = isAdmin ? 'assign' : 'assign-staff';
+          await api.put(`/orders/${view._id}/${endpoint}`, { staffId: form.assigned || null });
         }
       }
 
-      // 4) update items (qty + price)
       if (Array.isArray(view.items)) {
         const payload = view.items.map(it => ({
           product: it.product?._id || it.product,
@@ -186,12 +180,10 @@ export default function Orders({ user }) {
         await api.put(`/orders/${view._id}/items`, { items: payload });
       }
 
-      // 5) add note if any
       if (note.trim()) {
         await api.post(`/orders/${view._id}/comment`, { text: note.trim() });
       }
 
-      // reload list + modal view
       await fetchData();
       await openView(view._id);
     } catch (e) {
@@ -201,10 +193,10 @@ export default function Orders({ user }) {
     }
   };
 
-  // inline assign (outside modal)
   const inlineAssign = async (orderId, staffId) => {
     try {
-      await api.put(`/orders/${orderId}/assign`, { staffId: staffId || null });
+      const endpoint = isAdmin ? 'assign' : 'assign-staff';
+      await api.put(`/orders/${orderId}/${endpoint}`, { staffId: staffId || null });
       await fetchData();
     } catch (e) {
       alert(e?.response?.data?.message || 'Could not assign');
@@ -256,16 +248,16 @@ export default function Orders({ user }) {
                 </td>
                 <td>{(o.items || []).reduce((a, it) => a + (Number(it.qty) || 0), 0)}</td>
                 <td>
-                  {isAdmin ? (
+                  {(isAdmin || isSubAdmin) ? (
                     <select
                       className="select od-assign-inline"
-                      value={(o.assignedTo?._id || o.assignedTo || '') || ''}
+                      value={(o.staffAssignedTo?._id || o.staffAssignedTo || o.assignedTo?._id || o.assignedTo || '') || ''}
                       onChange={(e) => inlineAssign(o._id, e.target.value)}
                     >
                       <option value="">— Unassigned —</option>
                       {staff.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
                     </select>
-                  ) : (o.assignedTo?.name || '-')}
+                  ) : (o.staffAssignedTo?.name || o.assignedTo?.name || '-')}
                 </td>
                 <td>{new Date(o.createdAt).toLocaleString()}</td>
                 <td>
@@ -290,7 +282,6 @@ export default function Orders({ user }) {
         </div>
       )}
 
-      {/* VIEW / EDIT MODAL */}
       {modalOpen && (
         <div className="modal-backdrop" onClick={closeModal}>
           <div className="modal glass nv-animate-up od-modal" onClick={(e) => e.stopPropagation()}>
@@ -302,8 +293,8 @@ export default function Orders({ user }) {
             <div className="modal-body od-body">
               <form className="form modal-form od-form" onSubmit={saveInfo}>
                 <div className="od-grid">
-                  {/* Assign (admin only) */}
-                  {isAdmin && (
+
+                  {(isAdmin || isSubAdmin) && (
                     <div className="od-section">
                       <div className="od-sec-title">Assign to Staff</div>
                       <div className="od-field">
@@ -320,6 +311,7 @@ export default function Orders({ user }) {
                     </div>
                   )}
 
+                  {/* Contact */}
                   <div className="od-section">
                     <div className="od-sec-title">Contact</div>
                     <div className="row">
@@ -337,6 +329,7 @@ export default function Orders({ user }) {
                     </div>
                   </div>
 
+                  {/* Customer */}
                   <div className="od-section">
                     <div className="od-sec-title">Customer</div>
                     <div className="row">
@@ -351,6 +344,7 @@ export default function Orders({ user }) {
                     </div>
                   </div>
 
+                  {/* Shipping */}
                   <div className="od-section">
                     <div className="od-sec-title">Shipping</div>
                     <div className="od-field">
@@ -373,6 +367,7 @@ export default function Orders({ user }) {
                     </div>
                   </div>
 
+                  {/* Status */}
                   <div className="od-section">
                     <div className="od-sec-title">Status</div>
                     <div className="od-field">
@@ -383,26 +378,18 @@ export default function Orders({ user }) {
                     </div>
                   </div>
 
+                  {/* Items */}
                   <div className="od-section">
                     <div className="od-sec-title">Items</div>
                     <div className="od-items od-items-edit">
                       {(view.items || []).map((it, idx) => (
                         <div key={idx} className="od-item">
                           <div className="od-item-name">{it.product?.name || 'Product'}</div>
-
-                          {/* Qty */}
                           <div className="od-qtyctrl">
                             <button type="button" onClick={() => updateItemQty(idx, (Number(it.qty || 1) - 1))}>−</button>
-                            <input
-                              type="number"
-                              min="1"
-                              value={it.qty}
-                              onChange={e => updateItemQty(idx, e.target.value)}
-                            />
+                            <input type="number" min="1" value={it.qty} onChange={e => updateItemQty(idx, e.target.value)} />
                             <button type="button" onClick={() => updateItemQty(idx, (Number(it.qty || 1) + 1))}>+</button>
                           </div>
-
-                          {/* Editable price */}
                           <div className="od-price-edit">
                             ₹
                             <input
@@ -430,12 +417,13 @@ export default function Orders({ user }) {
                     </div>
                   </div>
 
+                  {/* Note */}
                   <div className="od-section">
                     <div className="od-sec-title">Add Note</div>
                     <textarea
                       className="input"
                       rows="3"
-                      placeholder="Enter note (e.g. customer said call later, address landmark, etc.)"
+                      placeholder="Enter note"
                       value={note}
                       onChange={e => setNote(e.target.value)}
                     />
@@ -461,20 +449,13 @@ export default function Orders({ user }) {
                 </div>
               </form>
             </div>
-
           </div>
         </div>
       )}
 
-      return (
-  <RequireWalletBalance>
-    <div className="container">
-      {/* yaha aapka pura existing orders table + modal code rahega */}
-    </div>
-  </RequireWalletBalance>
-);
-
-
+      <RequireWalletBalance>
+        <div className="container">{/* wrapper */}</div>
+      </RequireWalletBalance>
     </div>
   );
 }
