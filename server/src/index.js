@@ -53,6 +53,7 @@ app.use('/api/wallet', require('./routes/wallet.routes'));
 app.use('/api/super-admin', superAdminRoutes);
 
 
+
 /* ---------- 404 handler ---------- */
 app.use((req, res, _next) => {
   return res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });

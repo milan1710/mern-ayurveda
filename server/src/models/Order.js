@@ -35,7 +35,11 @@ const orderSchema = new Schema({
   // ✅ SubAdmin → Staff assignment
   staffAssignedTo: { type: Types.ObjectId, ref: 'User', default: null },
 
-  comments: [commentSchema]
+  comments: [commentSchema],
+
+  // ✅ (Optional) track karne ke liye field
+  lastOrderAt: { type: Date, default: Date.now }  
+
 }, { timestamps: true });
 
 module.exports = model('Order', orderSchema);

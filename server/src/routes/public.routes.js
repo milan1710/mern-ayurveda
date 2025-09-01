@@ -50,6 +50,21 @@ router.post('/orders', async (req, res) => {
     return res.status(400).json({ message: 'Invalid product in items' });
   }
 
+  // ✅ 24-hour order restriction check (same phone + same product)
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const recentOrder = await Order.findOne({
+    "info.phone": info.phone,
+    "items.product": { $in: productIds },
+    createdAt: { $gte: twentyFourHoursAgo }
+  });
+
+  if (recentOrder) {
+    return res
+      .status(400)
+      .json({ message: "Order already confirmed in last 24 hours" });
+  }
+
   // auto-assign staff (first product's assignedTo used)
   let assignedTo = null;
   for (const prod of products) {
